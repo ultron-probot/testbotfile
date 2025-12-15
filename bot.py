@@ -420,26 +420,33 @@ async def spam_control(c, m):
     if uid in last_msg and now - last_msg[uid] < 1:
         return await m.stop_propagation()
 
-    last_msg[uid] = now
-  @bot.on_message(filters.command("broadcast") & filters.user(SUDO_USERS))
-async def bc(c, m):
-    flags = m.text.split()
+    last_msg[uid] = now  
+    # =====================
+# BROADCAST SYSTEM
+# =====================
+
+@bot.on_message(filters.command("broadcast") & filters.user(SUDO_USERS))
+async def broadcast_handler(client, message):
+    flags = message.text.split()
     pin = "-pin" in flags
     user_only = "-user" in flags
 
     sent = 0
-    for u in users.find():
+
+    for user in users.find():
         try:
-            msg = await m.copy(u["user_id"])
+            msg = await message.copy(user["user_id"])
             if pin:
-                await msg.pin()
+                try:
+                    await msg.pin()
+                except:
+                    pass
             sent += 1
         except:
             pass
 
-    await m.reply(f"✅ Broadcast sent: {sent}")
-  print("🔥 FULL PREMIUM BOT RUNNING")
+    await message.reply(f"✅ Broadcast completed\n📤 Sent: {sent}")
+   print("🔥 FULL PREMIUM BOT RUNNING")
 bot.run()
 
 
-  
