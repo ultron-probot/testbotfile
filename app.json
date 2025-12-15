@@ -1,0 +1,31 @@
+{
+  "name": "Premium Telegram Bot",
+  "description": "Secure File Sharing & Reward Bot",
+  "repository": "https://github.com/USERNAME/REPO",
+  "env": {
+    "API_ID": {
+      "description": "Telegram API ID",
+      "required": true
+    },
+    "API_HASH": {
+      "description": "Telegram API HASH",
+      "required": true
+    },
+    "BOT_TOKEN": {
+      "description": "Bot Token",
+      "required": true
+    },
+    "MONGO_URL": {
+      "description": "MongoDB Atlas URL",
+      "required": true
+    },
+    "OWNER_ID": {
+      "description": "Bot Owner Telegram ID",
+      "required": true
+    },
+    "LOG_GROUP": {
+      "description": "Reward Log Group ID",
+      "required": true
+    }
+  }
+  }
