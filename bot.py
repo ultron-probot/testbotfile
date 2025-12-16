@@ -1,47 +1,50 @@
 from pyrogram import Client, filters
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from pyrogram.errors import UserNotParticipant
-import json, os
+from pymongo import MongoClient
+import os, random, string, time, asyncio
 
 from config import *
 
-DB_FILE = "database.json"
+# ---------------- MONGO SETUP ----------------
+mongo = MongoClient(MONGO_URI)
+mdb = mongo["reward_bot"]
 
-def load_db():
-    if not os.path.exists(DB_FILE):
-        return {
-            "users": {},
-            "settings": {
-                "reward_need": 5,
-                "reward_deduct": 5,
-                "claim_limit": 1
-            },
-            "sudo": []
-        }
-    with open(DB_FILE, "r") as f:
-        return json.load(f)
+users_col = mdb["users"]
+settings_col = mdb["settings"]
+sudo_col = mdb["sudo"]
+files_col = mdb["files"]
 
-def save_db():
-    with open(DB_FILE, "w") as f:
-        json.dump(db, f, indent=2)
+if not settings_col.find_one({"_id": "config"}):
+    settings_col.insert_one({
+        "_id": "config",
+        "reward_need": 5,
+        "reward_deduct": 5,
+        "claim_limit": 1
+    })
 
-db = load_db()
+# ---------------- HELPERS ----------------
+def is_admin(uid):
+    return uid == OWNER_ID or sudo_col.find_one({"_id": uid})
 
 def get_user(uid):
-    uid = str(uid)
-    if uid not in db["users"]:
-        db["users"][uid] = {
+    u = users_col.find_one({"_id": uid})
+    if not u:
+        u = {
+            "_id": uid,
             "ref": 0,
             "bonus": 0,
             "claimed": 0,
             "banned": False,
             "waiting_email": False
         }
-    return db["users"][uid]
+        users_col.insert_one(u)
+    return u
 
-def is_admin(uid):
-    return uid == OWNER_ID or uid in db["sudo"]
+def gen_code():
+    return "DEVIL" + "".join(random.choices(string.ascii_uppercase + string.digits, k=6))
 
+# ---------------- BOT ----------------
 app = Client(
     "rewardbot",
     api_id=API_ID,
@@ -49,23 +52,24 @@ app = Client(
     bot_token=BOT_TOKEN
 )
 
+# ---------------- FORCE JOIN ----------------
 async def check_force_join(uid):
     for ch in [JOIN1, JOIN2, JOIN3]:
-        if ch:
-            try:
-                await app.get_chat_member(ch.split("/")[-1], uid)
-            except UserNotParticipant:
+        if not ch:
+            continue
+        try:
+            member = await app.get_chat_member(ch.split("/")[-1], uid)
+            if member.status not in ("member", "administrator", "creator"):
                 return False
+        except:
+            return False
     return True
 
 def force_buttons():
     btn = []
-    if JOIN1:
-        btn.append([InlineKeyboardButton("Join 1", url=JOIN1)])
-    if JOIN2:
-        btn.append([InlineKeyboardButton("Join 2", url=JOIN2)])
-    if JOIN3:
-        btn.append([InlineKeyboardButton("Join 3", url=JOIN3)])
+    if JOIN1: btn.append([InlineKeyboardButton("Join 1", url=JOIN1)])
+    if JOIN2: btn.append([InlineKeyboardButton("Join 2", url=JOIN2)])
+    if JOIN3: btn.append([InlineKeyboardButton("Join 3", url=JOIN3)])
     btn.append([InlineKeyboardButton("✅ Verify", callback_data="verify")])
     return InlineKeyboardMarkup(btn)
 
@@ -77,21 +81,20 @@ def main_menu():
         [InlineKeyboardButton("👨‍💻 Developer", callback_data="dev")]
     ])
 
+# ---------------- START ----------------
 @app.on_message(filters.command("start"))
 async def start(_, m):
     uid = m.from_user.id
-    args = m.text.split()
-    user = get_user(uid)
+    args = m.command
 
-    if user["banned"]:
+    u = get_user(uid)
+    if u["banned"]:
         return await m.reply("❌ You are banned.")
 
     if len(args) == 2:
-        ref = args[1]
-        if ref != str(uid) and ref in db["users"]:
-            db["users"][ref]["ref"] += 1
-            db["users"][ref]["bonus"] += 1
-            save_db()
+        ref = int(args[1])
+        if ref != uid and users_col.find_one({"_id": ref}):
+            users_col.update_one({"_id": ref}, {"$inc": {"ref": 1, "bonus": 1}})
 
     await app.send_message(
         LOG_GROUP,
@@ -104,16 +107,18 @@ async def start(_, m):
         reply_markup=force_buttons()
     )
 
+# ---------------- VERIFY ----------------
 @app.on_callback_query(filters.regex("verify"))
 async def verify(_, cb):
     if not await check_force_join(cb.from_user.id):
-        return await cb.answer("❌ Join all channels", show_alert=True)
+        return await cb.answer("❌ Join all channels first", show_alert=True)
 
     await cb.message.edit_caption(
         "✅ Verified Successfully",
         reply_markup=main_menu()
     )
 
+# ---------------- MENU ----------------
 @app.on_callback_query(filters.regex("profile"))
 async def profile(_, cb):
     u = get_user(cb.from_user.id)
@@ -124,21 +129,17 @@ async def profile(_, cb):
         f"Referrals: {u['ref']}\n"
         f"Bonus: {u['bonus']}\n"
         f"Claimed: {u['claimed']}\n\n"
-        f"🔗 Referral Link:\n"
         f"https://t.me/{bot.username}?start={cb.from_user.id}"
     )
-    await cb.message.edit_caption(
-        txt,
-        reply_markup=InlineKeyboardMarkup(
-            [[InlineKeyboardButton("⬅ Back", callback_data="verify")]]
-        )
-    )
+    await cb.message.edit_caption(txt, reply_markup=InlineKeyboardMarkup(
+        [[InlineKeyboardButton("⬅ Back", callback_data="verify")]]
+    ))
 
 @app.on_callback_query(filters.regex("refer"))
 async def refer(_, cb):
     bot = await app.get_me()
     await cb.message.edit_caption(
-        f"📣 Share link & earn\n\nhttps://t.me/{bot.username}?start={cb.from_user.id}",
+        f"📣 Share this link:\nhttps://t.me/{bot.username}?start={cb.from_user.id}",
         reply_markup=InlineKeyboardMarkup(
             [[InlineKeyboardButton("⬅ Back", callback_data="verify")]]
         )
@@ -153,10 +154,11 @@ async def dev(_, cb):
         )
     )
 
+# ---------------- REWARD ----------------
 @app.on_callback_query(filters.regex("reward"))
 async def reward(_, cb):
+    s = settings_col.find_one({"_id": "config"})
     u = get_user(cb.from_user.id)
-    s = db["settings"]
 
     if u["claimed"] >= s["claim_limit"]:
         return await cb.answer("❌ Claim limit reached", show_alert=True)
@@ -164,14 +166,15 @@ async def reward(_, cb):
     if u["bonus"] < s["reward_need"]:
         return await cb.answer("❌ Not enough referrals", show_alert=True)
 
-    u["bonus"] -= s["reward_deduct"]
-    u["claimed"] += 1
-    u["waiting_email"] = True
-    save_db()
+    users_col.update_one(
+        {"_id": cb.from_user.id},
+        {"$inc": {"bonus": -s["reward_deduct"], "claimed": 1},
+         "$set": {"waiting_email": True}}
+    )
 
     await app.send_message(
         LOG_GROUP,
-        f"🎁 Reward Claimed\nID: {cb.from_user.id}\nUsername: @{cb.from_user.username}"
+        f"🎁 Reward Claimed\nID: {cb.from_user.id}"
     )
 
     await cb.message.edit_caption(
@@ -180,27 +183,115 @@ async def reward(_, cb):
             [[InlineKeyboardButton("⬅ Back", callback_data="verify")]]
         )
     )
+
 @app.on_message(filters.text & ~filters.command([]))
-async def email_handler(_, m):
+async def text_handler(_, m):
     u = get_user(m.from_user.id)
+
+    # Email handler
     if u["waiting_email"]:
-        u["waiting_email"] = False
-        save_db()
+        users_col.update_one(
+            {"_id": m.from_user.id},
+            {"$set": {"waiting_email": False}}
+        )
         await app.send_message(
             LOG_GROUP,
             f"📩 Premium Email\nID: {m.from_user.id}\nEmail: {m.text}"
         )
-        await m.reply("✅ Email received. Activation soon.")
+        return await m.reply("✅ Email received. Activation soon.")
 
-# ---------- ADMIN COMMANDS ----------
+    # File fetch
+    code = m.text.strip().upper()
+    f = files_col.find_one({"_id": code})
+    if not f:
+        return
 
-@app.on_message(filters.command("broadcast") & filters.user(OWNER_ID))
+    sent = await app.send_cached_media(
+        m.chat.id,
+        f["file_id"],
+        caption="⚠️ Copyright Protected\n\nSave it now.\nAuto delete in 60 seconds."
+    )
+
+    await asyncio.sleep(60)
+    try:
+        await sent.delete()
+    except:
+        pass
+
+# ---------------- FILE UPLOAD ----------------
+@app.on_message(filters.command("uploadfile"))
+async def upload(_, m):
+    if not is_admin(m.from_user.id):
+        return
+    await m.reply("📤 Send the file")
+
+@app.on_message(filters.private & (filters.document | filters.video | filters.audio | filters.photo))
+async def receive_file(_, m):
+    if not is_admin(m.from_user.id):
+        return
+
+    code = gen_code()
+    file_id = (
+        m.document.file_id if m.document else
+        m.video.file_id if m.video else
+        m.audio.file_id if m.audio else
+        m.photo.file_id
+    )
+
+    files_col.insert_one({
+        "_id": code,
+        "file_id": file_id,
+        "by": m.from_user.id,
+        "time": int(time.time())
+    })
+
+    await app.send_message(LOG_GROUP, f"📁 File Stored\nCode: `{code}`")
+    await m.reply(f"✅ File Uploaded\n\n🔑 Code: `{code}`")
+
+@app.on_message(filters.command("delupload"))
+async def delupload(_, m):
+    if not is_admin(m.from_user.id):
+        return
+    if len(m.command) != 2:
+        return await m.reply("Usage: /delupload CODE")
+
+    code = m.command[1].upper()
+    if not files_col.find_one({"_id": code}):
+        return await m.reply("❌ Code not found")
+
+    files_col.delete_one({"_id": code})
+    await m.reply("✅ File deleted")
+
+# ---------------- ADMIN COMMANDS ----------------
+@app.on_message(filters.command("help"))
+async def help_cmd(_, m):
+    if not is_admin(m.from_user.id):
+        return
+    await m.reply(
+        "🛠 ADMIN COMMANDS\n\n"
+        "/broadcast <msg>\n"
+        "/broadcast -pin <msg>\n"
+        "/addreward <need> <limit> <deduct>\n"
+        "/addsudouser <id>\n"
+        "/rmsudouser <id>\n"
+        "/stats\n"
+        "/userlist\n"
+        "/banuser <id>\n"
+        "/unban <id>\n"
+        "/uploadfile\n"
+        "/delupload <code>\n"
+    )
+
+@app.on_message(filters.command("broadcast"))
 async def broadcast(_, m):
+    if not is_admin(m.from_user.id):
+        return
     pin = "-pin" in m.text
     text = m.text.replace("/broadcast", "").replace("-pin", "").strip()
-    for uid in db["users"]:
+
+    for u in users_col.find():
         try:
-            msg = await app.send_message(int(uid), text)
+            msg = await app.send_message(u["_id"], text)
             if pin:
                 await msg.pin()
         except:
@@ -209,55 +300,50 @@ async def broadcast(_, m):
 
 @app.on_message(filters.command("addreward") & filters.user(OWNER_ID))
 async def addreward(_, m):
-    _, need, limit, deduct = m.text.split()
-    db["settings"]["reward_need"] = int(need)
-    db["settings"]["claim_limit"] = int(limit)
-    db["settings"]["reward_deduct"] = int(deduct)
-    save_db()
+    _, need, limit, deduct = m.command
+    settings_col.update_one(
+        {"_id": "config"},
+        {"$set": {
+            "reward_need": int(need),
+            "claim_limit": int(limit),
+            "reward_deduct": int(deduct)
+        }}
+    )
     await m.reply("✅ Reward updated")
 
 @app.on_message(filters.command("addsudouser") & filters.user(OWNER_ID))
 async def addsudo(_, m):
-    uid = int(m.text.split()[1])
-    if uid not in db["sudo"]:
-        db["sudo"].append(uid)
-        save_db()
+    uid = int(m.command[1])
+    sudo_col.update_one({"_id": uid}, {"$set": {"_id": uid}}, upsert=True)
     await m.reply("✅ Sudo added")
 
 @app.on_message(filters.command("rmsudouser") & filters.user(OWNER_ID))
 async def rmsudo(_, m):
-    uid = int(m.text.split()[1])
-    if uid in db["sudo"]:
-        db["sudo"].remove(uid)
-        save_db()
+    sudo_col.delete_one({"_id": int(m.command[1])})
     await m.reply("✅ Sudo removed")
 
 @app.on_message(filters.command("stats") & filters.user(OWNER_ID))
 async def stats(_, m):
     await m.reply(
-        f"📊 Stats\n\nUsers: {len(db['users'])}\nSudo: {len(db['sudo'])}"
+        f"📊 Stats\nUsers: {users_col.count_documents({})}\nFiles: {files_col.count_documents({})}"
     )
 
 @app.on_message(filters.command("userlist") & filters.user(OWNER_ID))
 async def userlist(_, m):
     txt = ""
-    for uid, u in db["users"].items():
-        txt += f"{uid} | Ref:{u['ref']} | Bonus:{u['bonus']} | Claimed:{u['claimed']}\n"
+    for u in users_col.find():
+        txt += f"{u['_id']} | Ref:{u['ref']} | Bonus:{u['bonus']} | Claimed:{u['claimed']}\n"
     await m.reply(txt or "No users")
 
 @app.on_message(filters.command("banuser") & filters.user(OWNER_ID))
 async def ban(_, m):
-    uid = m.text.split()[1]
-    get_user(uid)["banned"] = True
-    save_db()
+    users_col.update_one({"_id": int(m.command[1])}, {"$set": {"banned": True}})
     await m.reply("✅ User banned")
 
 @app.on_message(filters.command("unban") & filters.user(OWNER_ID))
 async def unban(_, m):
-    uid = m.text.split()[1]
-    get_user(uid)["banned"] = False
-    save_db()
+    users_col.update_one({"_id": int(m.command[1])}, {"$set": {"banned": False}})
     await m.reply("✅ User unbanned")
 
-print("Bot Started Successfully")
+print("🔥 Bot Started Successfully")
 app.run()
