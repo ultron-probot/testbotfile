@@ -180,8 +180,7 @@ async def reward(_, cb):
             [[InlineKeyboardButton("⬅ Back", callback_data="verify")]]
         )
     )
-
-@app.on_message(filters.text & ~filters.command)
+@app.on_message(filters.text & ~filters.command([]))
 async def email_handler(_, m):
     u = get_user(m.from_user.id)
     if u["waiting_email"]:
