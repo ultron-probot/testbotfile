@@ -4,7 +4,7 @@ API_ID = int(os.environ.get("API_ID", 123456))
 API_HASH = os.environ.get("API_HASH", "API_HASH_HERE")
 BOT_TOKEN = os.environ.get("BOT_TOKEN", "BOT_TOKEN_HERE")
 
-OWNER_ID = int(os.environ.get("OWNER_ID", 8404535682)
+OWNER_ID = int(os.environ.get("OWNER_ID", 6135117014))
 LOG_GROUP = int(os.environ.get("LOG_GROUP", -1003415074133))
 
 START_IMAGE = os.environ.get(
