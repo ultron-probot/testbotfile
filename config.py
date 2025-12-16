@@ -15,3 +15,5 @@ START_IMAGE = os.environ.get(
 JOIN1 = os.environ.get("JOIN1", "https://t.me/A2globalupdate")
 JOIN2 = os.environ.get("JOIN2", "https://t.me/A2globalupdate")
 JOIN3 = os.environ.get("JOIN3", "https://t.me/A2globalupdate")
+
+MONGO_URI = os.environ.get("MONGO_URI", "")
