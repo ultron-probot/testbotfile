@@ -533,7 +533,7 @@ async def remove_code(client, message):
         await message.reply_text("❌ Use: `/rmcode CODE`")
 # ================= REDEEM CODE (USER) ================= #
 
-@app.on_message(filters.text & ~filters.command)
+@app.on_message(filters.text & ~filters.command())
 async def redeem_code_handler(client, message):
     user_id = message.from_user.id
     text = message.text.strip().upper()
