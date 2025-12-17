@@ -26,9 +26,9 @@ START_TELEGRAPH = os.getenv("START_TELEGRAPH", "https://telegra.ph/Welcome")
 # ================= FORCE JOIN CONFIG ================= #
 
 FORCE_CHANNELS = [
-    "@channel1username",
-    "@channel2username",
-    "@channel3username"
+    "https://t.me/A2globalupdate",
+    "https://t.me/A2globalupdate",
+    "https://t.me/A2globalupdate"
 ]
 BOT_USERNAME = os.getenv("BOT_USERNAME", "YourBotUsername")
 
@@ -114,7 +114,7 @@ def main_menu():
                 InlineKeyboardButton("💬 Support", url=SUPPORT_GROUP)
             ],
             [
-                InlineKeyboardButton("👨‍💻 Developer", url=f"https://t.me/{OWNER_IDS[0]}")
+                InlineKeyboardButton("👨‍💻 Developer", url=f"https://t.me/Ankitgupta2144")
             ]
         ]
     )
@@ -192,7 +192,7 @@ async def start_handler(client, message):
         "• Share referral link\n"
         "• Complete required referrals\n"
         "• Claim premium reward\n\n"
-        f"🔗 [Read Full Info]({START_TELEGRAPH})"
+        f"🔥[DEVLOPER]({START_TELEGRAPH})"
     )
 
     await message.reply_text(
