@@ -625,6 +625,7 @@ async def redeem_code_handler(client, message):
         f"⏳ Active till: `{active_till}`",
         reply_markup=main_menu()
         )
+
 # ================= REDEEM COMMAND ================= #
 
 @app.on_message(filters.command("redeem"))
@@ -656,15 +657,19 @@ async def redeem_command(client, message):
 
     user = users_col.find_one({"user_id": user_id})
 
-    if user.get("premium_active_till") and user["premium_active_till"] > get_time():
-        return await message.reply_text("❌ You already have active premium!")
+    # ❌ ACTIVE PREMIUM CHECK REMOVED (AS YOU REQUESTED)
 
     # Activate premium (30 days default)
     active_till = get_time() + datetime.timedelta(days=30)
 
     users_col.update_one(
         {"user_id": user_id},
-        {"$set": {"premium_active_till": active_till}}
+        {
+            "$set": {
+                "premium_active_till": active_till,
+                "awaiting_email": True
+            }
+        }
     )
 
     codes_col.update_one(
@@ -681,15 +686,10 @@ async def redeem_command(client, message):
         f"⏰ `{get_time()}`"
     )
 
-    users_col.update_one(
-    {"user_id": user_id},
-    {"$set": {"awaiting_email": True}}
-)
-
-await message.reply_text(
-    "🎉 **You have claimed YouTube Premium!**\n\n"
-    "📧 **Now send your email address to activate your premium.**"
-)
+    await message.reply_text(
+        "🎉 **You have claimed YouTube Premium!**\n\n"
+        "📧 **Now send your email address to activate your premium.**"
+    )
 #================= BROADCAST ================= #
 
 @app.on_message(filters.command("broadcast"))
