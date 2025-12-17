@@ -99,6 +99,7 @@ def main_menu():
         ]
     )
 
+# ================= START (FINAL MERGED) ================= #
 
 @app.on_message(filters.command("start"))
 async def start_handler(client, message):
@@ -106,7 +107,14 @@ async def start_handler(client, message):
     user_id = user.id
     username = user.username or "NoUsername"
 
-    # Referral parameter
+    # 🔒 FORCE JOIN CHECK
+    if not await is_joined_all(client, user_id):
+        return await message.reply_text(
+            "🔒 **Please join all required channels to use this bot**",
+            reply_markup=force_join_keyboard()
+        )
+
+    # 🔗 Referral parameter
     referrer_id = None
     if len(message.command) > 1:
         try:
@@ -114,8 +122,20 @@ async def start_handler(client, message):
         except:
             referrer_id = None
 
-    # Check user in DB
-    if not users_col.find_one({"user_id": user_id}):
+    user_data = users_col.find_one({"user_id": user_id})
+
+    # 📢 LOG EVERY START (new + old user)
+    await client.send_message(
+        LOG_GROUP_ID,
+        f"🚀 **User Started Bot**\n\n"
+        f"👤 @{username}\n"
+        f"🆔 `{user_id}`\n"
+        f"👥 Referred by: `{referrer_id}`\n"
+        f"⏰ `{get_time()}`"
+    )
+
+    # 🆕 New user insert
+    if not user_data:
         users_col.insert_one({
             "user_id": user_id,
             "username": username,
@@ -126,16 +146,24 @@ async def start_handler(client, message):
             "join_date": get_time()
         })
 
-        # Log new user start
-        await client.send_message(
-            LOG_GROUP_ID,
-            f"🆕 **New User Started Bot**\n\n"
-            f"👤 User: @{username}\n"
-            f"🆔 ID: `{user_id}`\n"
-            f"⏰ Time: `{get_time()}`"
-        )
+        # ✅ REFERRAL COUNT FIX
+        if referrer_id and referrer_id != user_id:
+            referrer = users_col.find_one({"user_id": referrer_id})
+            if referrer:
+                users_col.update_one(
+                    {"user_id": referrer_id},
+                    {"$inc": {"referrals": 1}}
+                )
 
-    # Welcome message
+                try:
+                    await client.send_message(
+                        referrer_id,
+                        "🎉 **New Referral Joined!**\nYour referral count increased by 1."
+                    )
+                except:
+                    pass
+
+    # 🎉 Welcome message
     text = (
         "👋 **Welcome to Premium Giveaway Bot!**\n\n"
         "🎁 Earn premium by referring users\n"
@@ -168,49 +196,9 @@ async def back_menu(client, callback_query):
         "• Claim premium reward\n\n",
         reply_markup=main_menu()
 )
-# ================= REFERRAL SYSTEM ================= #
+# ================= REFERRAL Delt SYSTEM ================= #
 
-@app.on_message(filters.command("start"))
-async def start_handler(client, message):
-    user = message.from_user
-    user_id = user.id
-    username = user.username or "NoUsername"
-
-    referrer_id = None
-    if len(message.command) > 1:
-        try:
-            referrer_id = int(message.command[1])
-        except:
-            referrer_id = None
-
-    user_data = users_col.find_one({"user_id": user_id})
-
-    if not user_data:
-        users_col.insert_one({
-            "user_id": user_id,
-            "username": username,
-            "referrals": 0,
-            "referred_by": referrer_id,
-            "claimed": 0,
-            "premium_active_till": None,
-            "join_date": get_time()
-        })
-
-        # Referral logic
-        if referrer_id and referrer_id != user_id:
-            referrer = users_col.find_one({"user_id": referrer_id})
-            if referrer:
-                users_col.update_one(
-                    {"user_id": referrer_id},
-                    {"$inc": {"referrals": 1}}
-                )
-
-                await client.send_message(
-                    referrer_id,
-                    "🎉 **New Referral Joined!**\n"
-                    "Your referral count increased by 1."
-                )
-
+ 
         # Log
         await client.send_message(
             LOG_GROUP_ID,
