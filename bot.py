@@ -1,349 +1,757 @@
 from pyrogram import Client, filters
-from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
-from pyrogram.errors import UserNotParticipant
+from pyrogram.types import (
+    InlineKeyboardButton,
+    InlineKeyboardMarkup
+)
 from pymongo import MongoClient
-import os, random, string, time, asyncio
+import datetime
+import os
 
-from config import *
+# ================= CONFIG ================= #
 
-# ---------------- MONGO SETUP ----------------
-mongo = MongoClient(MONGO_URI)
-mdb = mongo["reward_bot"]
+API_ID = int(os.getenv("API_ID", "123456"))
+API_HASH = os.getenv("API_HASH", "YOUR_API_HASH")
+BOT_TOKEN = os.getenv("BOT_TOKEN", "YOUR_BOT_TOKEN")
 
-users_col = mdb["users"]
-settings_col = mdb["settings"]
-sudo_col = mdb["sudo"]
-files_col = mdb["files"]
+MONGO_URL = os.getenv("MONGO_URL", "YOUR_MONGODB_ATLAS_URL")
 
-if not settings_col.find_one({"_id": "config"}):
-    settings_col.insert_one({
-        "_id": "config",
-        "reward_need": 5,
-        "reward_deduct": 5,
-        "claim_limit": 1
-    })
+# Multiple owner IDs (comma separated)
+OWNER_IDS = list(map(int, os.getenv("OWNER_IDS", "123456789").split(",")))
 
-# ---------------- HELPERS ----------------
-def is_admin(uid):
-    return uid == OWNER_ID or sudo_col.find_one({"_id": uid})
+LOG_GROUP_ID = int(os.getenv("LOG_GROUP_ID", "-1001234567890"))
 
-def get_user(uid):
-    u = users_col.find_one({"_id": uid})
-    if not u:
-        u = {
-            "_id": uid,
-            "ref": 0,
-            "bonus": 0,
-            "claimed": 0,
-            "banned": False,
-            "waiting_email": False
-        }
-        users_col.insert_one(u)
-    return u
+SUPPORT_GROUP = os.getenv("SUPPORT_GROUP", "https://t.me/yourgroup")
+START_TELEGRAPH = os.getenv("START_TELEGRAPH", "https://telegra.ph/Welcome")
 
-def gen_code():
-    return "DEVIL" + "".join(random.choices(string.ascii_uppercase + string.digits, k=6))
+BOT_USERNAME = os.getenv("BOT_USERNAME", "YourBotUsername")
 
-# ---------------- BOT ----------------
+# ================= BOT ================= #
+
 app = Client(
-    "rewardbot",
+    "devilbot",
     api_id=API_ID,
     api_hash=API_HASH,
     bot_token=BOT_TOKEN
 )
 
-# ---------------- FORCE JOIN ----------------
-async def check_force_join(uid):
-    for ch in [JOIN1, JOIN2, JOIN3]:
-        if not ch:
-            continue
-        try:
-            member = await app.get_chat_member(ch.split("/")[-1], uid)
-            if member.status not in ("member", "administrator", "creator"):
-                return False
-        except:
-            return False
-    return True
+# ================= DATABASE ================= #
 
-def force_buttons():
-    btn = []
-    if JOIN1: btn.append([InlineKeyboardButton("Join 1", url=JOIN1)])
-    if JOIN2: btn.append([InlineKeyboardButton("Join 2", url=JOIN2)])
-    if JOIN3: btn.append([InlineKeyboardButton("Join 3", url=JOIN3)])
-    btn.append([InlineKeyboardButton("✅ Verify", callback_data="verify")])
-    return InlineKeyboardMarkup(btn)
+mongo = MongoClient(MONGO_URL)
+db = mongo["devilbot"]
+
+users_col = db["users"]
+premium_col = db["premium"]
+codes_col = db["codes"]
+history_col = db["history"]
+
+# ================= HELPERS ================= #
+
+def is_owner(user_id: int) -> bool:
+    return user_id in OWNER_IDS
+
+def get_time():
+    return datetime.datetime.utcnow()
+
+
+# ================= START & MENU ================= #
 
 def main_menu():
-    return InlineKeyboardMarkup([
-        [InlineKeyboardButton("🎁 Free Reward", callback_data="reward")],
-        [InlineKeyboardButton("👤 Profile", callback_data="profile")],
-        [InlineKeyboardButton("📣 Refer & Get Premium", callback_data="refer")],
-        [InlineKeyboardButton("👨‍💻 Developer", callback_data="dev")]
-    ])
+    return InlineKeyboardMarkup(
+        [
+            [
+                InlineKeyboardButton("🎁 Get Free Premium", callback_data="get_premium"),
+                InlineKeyboardButton("👤 Profile", callback_data="profile")
+            ],
+            [
+                InlineKeyboardButton("🔗 Refer & Get Premium", callback_data="refer"),
+                InlineKeyboardButton("💬 Support", url=SUPPORT_GROUP)
+            ],
+            [
+                InlineKeyboardButton("👨‍💻 Developer", url=f"https://t.me/{OWNER_IDS[0]}")
+            ]
+        ]
+    )
 
-# ---------------- START ----------------
+
 @app.on_message(filters.command("start"))
-async def start(_, m):
-    uid = m.from_user.id
-    args = m.command
+async def start_handler(client, message):
+    user = message.from_user
+    user_id = user.id
+    username = user.username or "NoUsername"
 
-    u = get_user(uid)
-    if u["banned"]:
-        return await m.reply("❌ You are banned.")
+    # Referral parameter
+    referrer_id = None
+    if len(message.command) > 1:
+        try:
+            referrer_id = int(message.command[1])
+        except:
+            referrer_id = None
 
-    if len(args) == 2:
-        ref = int(args[1])
-        if ref != uid and users_col.find_one({"_id": ref}):
-            users_col.update_one({"_id": ref}, {"$inc": {"ref": 1, "bonus": 1}})
+    # Check user in DB
+    if not users_col.find_one({"user_id": user_id}):
+        users_col.insert_one({
+            "user_id": user_id,
+            "username": username,
+            "referrals": 0,
+            "referred_by": referrer_id,
+            "claimed": 0,
+            "premium_active_till": None,
+            "join_date": get_time()
+        })
 
-    await app.send_message(
-        LOG_GROUP,
-        f"🚀 Bot Started\nID: {uid}\nUsername: @{m.from_user.username}"
+        # Log new user start
+        await client.send_message(
+            LOG_GROUP_ID,
+            f"🆕 **New User Started Bot**\n\n"
+            f"👤 User: @{username}\n"
+            f"🆔 ID: `{user_id}`\n"
+            f"⏰ Time: `{get_time()}`"
+        )
+
+    # Welcome message
+    text = (
+        "👋 **Welcome to Premium Giveaway Bot!**\n\n"
+        "🎁 Earn premium by referring users\n"
+        "🚀 Simple & fast claiming system\n\n"
+        "📢 **How it works:**\n"
+        "• Share referral link\n"
+        "• Complete required referrals\n"
+        "• Claim premium reward\n\n"
+        f"🔗 [Read Full Info]({START_TELEGRAPH})"
     )
 
-    await m.reply_photo(
-        START_IMAGE,
-        caption="🎁 Welcome\n\nJoin all channels then verify",
-        reply_markup=force_buttons()
+    await message.reply_text(
+        text,
+        reply_markup=main_menu(),
+        disable_web_page_preview=True
     )
 
-# ---------------- VERIFY ----------------
-@app.on_callback_query(filters.regex("verify"))
-async def verify(_, cb):
-    if not await check_force_join(cb.from_user.id):
-        return await cb.answer("❌ Join all channels first", show_alert=True)
 
-    await cb.message.edit_caption(
-        "✅ Verified Successfully",
+# ================= BACK TO MENU ================= #
+
+@app.on_callback_query(filters.regex("back_menu"))
+async def back_menu(client, callback_query):
+    await callback_query.message.edit_text(
+        "🏠 **Main Menu**",
         reply_markup=main_menu()
+)
+# ================= REFERRAL SYSTEM ================= #
+
+@app.on_message(filters.command("start"))
+async def start_handler(client, message):
+    user = message.from_user
+    user_id = user.id
+    username = user.username or "NoUsername"
+
+    referrer_id = None
+    if len(message.command) > 1:
+        try:
+            referrer_id = int(message.command[1])
+        except:
+            referrer_id = None
+
+    user_data = users_col.find_one({"user_id": user_id})
+
+    if not user_data:
+        users_col.insert_one({
+            "user_id": user_id,
+            "username": username,
+            "referrals": 0,
+            "referred_by": referrer_id,
+            "claimed": 0,
+            "premium_active_till": None,
+            "join_date": get_time()
+        })
+
+        # Referral logic
+        if referrer_id and referrer_id != user_id:
+            referrer = users_col.find_one({"user_id": referrer_id})
+            if referrer:
+                users_col.update_one(
+                    {"user_id": referrer_id},
+                    {"$inc": {"referrals": 1}}
+                )
+
+                await client.send_message(
+                    referrer_id,
+                    "🎉 **New Referral Joined!**\n"
+                    "Your referral count increased by 1."
+                )
+
+        # Log
+        await client.send_message(
+            LOG_GROUP_ID,
+            f"🆕 **New User Started Bot**\n\n"
+            f"👤 User: @{username}\n"
+            f"🆔 ID: `{user_id}`\n"
+            f"👥 Referred By: `{referrer_id}`\n"
+            f"⏰ Time: `{get_time()}`"
+        )
+
+    text = (
+        "👋 **Welcome to Premium Giveaway Bot!**\n\n"
+        "🎁 Earn premium by referring users\n"
+        "🚀 Simple & fast claiming system\n\n"
+        f"🔗 [Read Full Info]({START_TELEGRAPH})"
     )
 
-# ---------------- MENU ----------------
-@app.on_callback_query(filters.regex("profile"))
-async def profile(_, cb):
-    u = get_user(cb.from_user.id)
-    bot = await app.get_me()
-    txt = (
-        f"👤 Profile\n\n"
-        f"ID: {cb.from_user.id}\n"
-        f"Referrals: {u['ref']}\n"
-        f"Bonus: {u['bonus']}\n"
-        f"Claimed: {u['claimed']}\n\n"
-        f"https://t.me/{bot.username}?start={cb.from_user.id}"
+    await message.reply_text(
+        text,
+        reply_markup=main_menu(),
+        disable_web_page_preview=True
     )
-    await cb.message.edit_caption(txt, reply_markup=InlineKeyboardMarkup(
-        [[InlineKeyboardButton("⬅ Back", callback_data="verify")]]
-    ))
+
+
+# ================= REFER BUTTON ================= #
 
 @app.on_callback_query(filters.regex("refer"))
-async def refer(_, cb):
-    bot = await app.get_me()
-    await cb.message.edit_caption(
-        f"📣 Share this link:\nhttps://t.me/{bot.username}?start={cb.from_user.id}",
-        reply_markup=InlineKeyboardMarkup(
-            [[InlineKeyboardButton("⬅ Back", callback_data="verify")]]
-        )
+async def refer_handler(client, callback_query):
+    user_id = callback_query.from_user.id
+    user = users_col.find_one({"user_id": user_id})
+
+    link = f"https://t.me/{BOT_USERNAME}?start={user_id}"
+
+    text = (
+        "🔗 **Your Referral Link**\n\n"
+        f"`{link}`\n\n"
+        "📢 Share this link and earn referrals.\n"
+        "🎁 Complete referrals to claim premium!"
     )
 
-@app.on_callback_query(filters.regex("dev"))
-async def dev(_, cb):
-    await cb.message.edit_caption(
-        f"👨‍💻 Developer ID:\n`{OWNER_ID}`",
+    await callback_query.message.edit_text(
+        text,
         reply_markup=InlineKeyboardMarkup(
-            [[InlineKeyboardButton("⬅ Back", callback_data="verify")]]
+            [[InlineKeyboardButton("⬅️ Back", callback_data="back_menu")]]
+        )
+)
+# ================= GET FREE PREMIUM ================= #
+
+@app.on_callback_query(filters.regex("get_premium"))
+async def get_premium(client, callback_query):
+    user_id = callback_query.from_user.id
+    user = users_col.find_one({"user_id": user_id})
+
+    if not user:
+        return await callback_query.answer("User not found!", show_alert=True)
+
+    # Check active premium
+    if user.get("premium_active_till"):
+        if user["premium_active_till"] > get_time():
+            return await callback_query.answer(
+                "❌ You already have an active premium!",
+                show_alert=True
+            )
+
+    giveaway = premium_col.find_one({"active": True})
+    if not giveaway:
+        return await callback_query.answer(
+            "❌ No active premium giveaway right now!",
+            show_alert=True
+        )
+
+    required_refs = giveaway["required_refs"]
+
+    if user["referrals"] < required_refs:
+        return await callback_query.answer(
+            f"❌ You need {required_refs} referrals to claim!",
+            show_alert=True
+        )
+
+    await callback_query.message.edit_text(
+        f"✅ **You are eligible!**\n\n"
+        f"🎁 Reward: `{giveaway['reward']}`\n"
+        f"📉 Referrals to deduct: `{required_refs}`\n\n"
+        f"📧 **Now send your email address** to activate premium.",
+        reply_markup=InlineKeyboardMarkup(
+            [[InlineKeyboardButton("⬅️ Back", callback_data="back_menu")]]
         )
     )
-
-# ---------------- REWARD ----------------
-@app.on_callback_query(filters.regex("reward"))
-async def reward(_, cb):
-    s = settings_col.find_one({"_id": "config"})
-    u = get_user(cb.from_user.id)
-
-    if u["claimed"] >= s["claim_limit"]:
-        return await cb.answer("❌ Claim limit reached", show_alert=True)
-
-    if u["bonus"] < s["reward_need"]:
-        return await cb.answer("❌ Not enough referrals", show_alert=True)
 
     users_col.update_one(
-        {"_id": cb.from_user.id},
-        {"$inc": {"bonus": -s["reward_deduct"], "claimed": 1},
-         "$set": {"waiting_email": True}}
+        {"user_id": user_id},
+        {"$set": {"awaiting_email": True}}
     )
 
-    await app.send_message(
-        LOG_GROUP,
-        f"🎁 Reward Claimed\nID: {cb.from_user.id}"
-    )
 
-    await cb.message.edit_caption(
-        "📧 Send your Email ID\n(YouTube Premium – 1 Month)",
-        reply_markup=InlineKeyboardMarkup(
-            [[InlineKeyboardButton("⬅ Back", callback_data="verify")]]
-        )
-    )
+# ================= EMAIL COLLECT ================= #
 
-@app.on_message(filters.text & ~filters.command([]))
-async def text_handler(_, m):
-    u = get_user(m.from_user.id)
+@app.on_message(filters.text & ~filters.command)
+async def email_handler(client, message):
+    user_id = message.from_user.id
+    user = users_col.find_one({"user_id": user_id})
 
-    # Email handler
-    if u["waiting_email"]:
-        users_col.update_one(
-            {"_id": m.from_user.id},
-            {"$set": {"waiting_email": False}}
-        )
-        await app.send_message(
-            LOG_GROUP,
-            f"📩 Premium Email\nID: {m.from_user.id}\nEmail: {m.text}"
-        )
-        return await m.reply("✅ Email received. Activation soon.")
-
-    # File fetch
-    code = m.text.strip().upper()
-    f = files_col.find_one({"_id": code})
-    if not f:
+    if not user or not user.get("awaiting_email"):
         return
 
-    sent = await app.send_cached_media(
-        m.chat.id,
-        f["file_id"],
-        caption="⚠️ Copyright Protected\n\nSave it now.\nAuto delete in 60 seconds."
+    email = message.text.strip()
+    giveaway = premium_col.find_one({"active": True})
+
+    if not giveaway:
+        return await message.reply_text("❌ Giveaway expired.")
+
+    active_till = get_time() + datetime.timedelta(
+        days=giveaway["active_days"]
     )
 
-    await asyncio.sleep(60)
-    try:
-        await sent.delete()
-    except:
-        pass
-
-# ---------------- FILE UPLOAD ----------------
-@app.on_message(filters.command("uploadfile"))
-async def upload(_, m):
-    if not is_admin(m.from_user.id):
-        return
-    await m.reply("📤 Send the file")
-
-@app.on_message(filters.private & (filters.document | filters.video | filters.audio | filters.photo))
-async def receive_file(_, m):
-    if not is_admin(m.from_user.id):
-        return
-
-    code = gen_code()
-    file_id = (
-        m.document.file_id if m.document else
-        m.video.file_id if m.video else
-        m.audio.file_id if m.audio else
-        m.photo.file_id
+    # Update user
+    users_col.update_one(
+        {"user_id": user_id},
+        {
+            "$set": {
+                "premium_active_till": active_till,
+                "awaiting_email": False
+            },
+            "$inc": {
+                "referrals": -giveaway["required_refs"],
+                "claimed": 1
+            }
+        }
     )
 
-    files_col.insert_one({
-        "_id": code,
-        "file_id": file_id,
-        "by": m.from_user.id,
-        "time": int(time.time())
+    # Save history
+    history_col.insert_one({
+        "user_id": user_id,
+        "email": email,
+        "reward": giveaway["reward"],
+        "time": get_time()
     })
 
-    await app.send_message(LOG_GROUP, f"📁 File Stored\nCode: `{code}`")
-    await m.reply(f"✅ File Uploaded\n\n🔑 Code: `{code}`")
-
-@app.on_message(filters.command("delupload"))
-async def delupload(_, m):
-    if not is_admin(m.from_user.id):
-        return
-    if len(m.command) != 2:
-        return await m.reply("Usage: /delupload CODE")
-
-    code = m.command[1].upper()
-    if not files_col.find_one({"_id": code}):
-        return await m.reply("❌ Code not found")
-
-    files_col.delete_one({"_id": code})
-    await m.reply("✅ File deleted")
-
-# ---------------- ADMIN COMMANDS ----------------
-@app.on_message(filters.command("help"))
-async def help_cmd(_, m):
-    if not is_admin(m.from_user.id):
-        return
-    await m.reply(
-        "🛠 ADMIN COMMANDS\n\n"
-        "/broadcast <msg>\n"
-        "/broadcast -pin <msg>\n"
-        "/addreward <need> <limit> <deduct>\n"
-        "/addsudouser <id>\n"
-        "/rmsudouser <id>\n"
-        "/stats\n"
-        "/userlist\n"
-        "/banuser <id>\n"
-        "/unban <id>\n"
-        "/uploadfile\n"
-        "/delupload <code>\n"
+    # Log group
+    await client.send_message(
+        LOG_GROUP_ID,
+        f"🎉 **Premium Claimed**\n\n"
+        f"👤 User: @{message.from_user.username}\n"
+        f"🆔 ID: `{user_id}`\n"
+        f"📧 Email: `{email}`\n"
+        f"🎁 Reward: `{giveaway['reward']}`\n"
+        f"⏰ Time: `{get_time()}`"
     )
+
+    await message.reply_text(
+        "🎉 **Premium Claimed Successfully!**\n\n"
+        "📧 Your email has been sent for activation.\n"
+        "⏳ Please wait for confirmation.",
+        reply_markup=main_menu()
+    )
+# ================= PROFILE ================= #
+
+@app.on_callback_query(filters.regex("profile"))
+async def profile_handler(client, callback_query):
+    user_id = callback_query.from_user.id
+    user = users_col.find_one({"user_id": user_id})
+
+    if not user:
+        return await callback_query.answer("User not found!", show_alert=True)
+
+    referrals = user.get("referrals", 0)
+    claimed = user.get("claimed", 0)
+
+    premium_till = user.get("premium_active_till")
+    if premium_till and premium_till > get_time():
+        status = "✅ Active"
+        till = premium_till.strftime("%d-%m-%Y %H:%M")
+        can_claim = "❌ No (Premium Active)"
+    else:
+        status = "❌ Not Active"
+        till = "—"
+        can_claim = "✅ Yes"
+
+    text = (
+        "👤 **Your Profile**\n\n"
+        f"🆔 **User ID:** `{user_id}`\n"
+        f"👥 **Referrals:** `{referrals}`\n"
+        f"🎁 **Total Claims:** `{claimed}`\n\n"
+        f"💎 **Premium Status:** {status}\n"
+        f"⏳ **Active Till:** `{till}`\n\n"
+        f"🛡 **Can Claim New Reward:** {can_claim}"
+    )
+
+    await callback_query.message.edit_text(
+        text,
+        reply_markup=InlineKeyboardMarkup(
+            [[InlineKeyboardButton("⬅️ Back", callback_data="back_menu")]]
+        )
+        )
+# ================= TIME PARSER ================= #
+
+def parse_time(text):
+    total_seconds = 0
+    num = ""
+
+    for char in text:
+        if char.isdigit():
+            num += char
+        else:
+            if char == "h":
+                total_seconds += int(num) * 3600
+            elif char == "m":
+                total_seconds += int(num) * 60
+            elif char == "s":
+                total_seconds += int(num)
+            num = ""
+    return total_seconds
+# ================= ADD PREMIUM ================= #
+
+@app.on_message(filters.command("addpremium"))
+async def add_premium(client, message):
+    if not is_owner(message.from_user.id):
+        return
+
+    try:
+        _, amount, refs, active_time, per_user, months = message.text.split()
+        amount = int(amount)
+        refs = int(refs)
+        per_user = int(per_user)
+        months = int(months)
+
+        seconds = parse_time(active_time)
+        expire_at = get_time() + datetime.timedelta(seconds=seconds)
+
+        premium_col.delete_many({})  # remove old giveaway
+
+        premium_col.insert_one({
+            "amount": amount,
+            "required_refs": refs,
+            "per_user": per_user,
+            "active_till": expire_at,
+            "active_days": months * 30,
+            "reward": f"{months} Month Premium",
+            "active": True,
+            "created_at": get_time()
+        })
+
+        await message.reply_text(
+            "✅ **Premium Giveaway Added Successfully!**\n\n"
+            f"🎁 Reward: `{months} Month Premium`\n"
+            f"👥 Required Referrals: `{refs}`\n"
+            f"⏳ Active Till: `{expire_at}`\n"
+            f"📦 Total Amount: `{amount}`"
+        )
+
+    except Exception as e:
+        await message.reply_text(
+            "❌ **Wrong Format!**\n\n"
+            "`/addpremium amount referrals time per_user months`\n"
+            "Example:\n"
+            "`/addpremium 50 5 24h 1 1`"
+        )
+# ================= REMOVE PREMIUM ================= #
+
+@app.on_message(filters.command("rmpremium"))
+async def remove_premium(client, message):
+    if not is_owner(message.from_user.id):
+        return
+
+    premium_col.delete_many({})
+
+    await message.reply_text("🗑 **Premium Giveaway Removed!**")
+# ================= TIME PARSER (DAYS) ================= #
+
+def parse_time_full(text):
+    total_seconds = 0
+    num = ""
+
+    for char in text:
+        if char.isdigit():
+            num += char
+        else:
+            if char == "d":
+                total_seconds += int(num) * 86400
+            elif char == "h":
+                total_seconds += int(num) * 3600
+            elif char == "m":
+                total_seconds += int(num) * 60
+            elif char == "s":
+                total_seconds += int(num)
+            num = ""
+    return total_seconds
+import random
+import string
+
+# ================= GEN CODE ================= #
+
+def generate_code():
+    return ''.join(random.choices(string.ascii_uppercase + string.digits, k=10))
+
+
+@app.on_message(filters.command("gencode"))
+async def gen_code(client, message):
+    if not is_owner(message.from_user.id):
+        return
+
+    try:
+        _, per_user, user_limit, active_time = message.text.split()
+        per_user = int(per_user)
+        user_limit = int(user_limit)
+
+        seconds = parse_time_full(active_time)
+        expire_at = get_time() + datetime.timedelta(seconds=seconds)
+
+        code = generate_code()
+
+        codes_col.insert_one({
+            "code": code,
+            "per_user": per_user,
+            "user_limit": user_limit,
+            "used_by": [],
+            "expire_at": expire_at,
+            "created_at": get_time()
+        })
+
+        await message.reply_text(
+            "🎟 **Redeem Code Generated**\n\n"
+            f"🔑 Code: `{code}`\n"
+            f"👤 Per User: `{per_user}`\n"
+            f"👥 User Limit: `{user_limit}`\n"
+            f"⏳ Expire At: `{expire_at}`"
+        )
+
+    except:
+        await message.reply_text(
+            "❌ **Wrong Format**\n\n"
+            "`/gencode per_user user_limit time`\n"
+            "Example:\n"
+            "`/gencode 1 10 2d`"
+                )
+# ================= REMOVE CODE ================= #
+
+@app.on_message(filters.command("rmcode"))
+async def remove_code(client, message):
+    if not is_owner(message.from_user.id):
+        return
+
+    try:
+        _, code = message.text.split()
+        result = codes_col.delete_one({"code": code})
+
+        if result.deleted_count:
+            await message.reply_text("🗑 **Code removed successfully!**")
+        else:
+            await message.reply_text("❌ Code not found!")
+
+    except:
+        await message.reply_text("❌ Use: `/rmcode CODE`")
+# ================= REDEEM CODE (USER) ================= #
+
+@app.on_message(filters.text & ~filters.command)
+async def redeem_code_handler(client, message):
+    user_id = message.from_user.id
+    text = message.text.strip().upper()
+
+    code_data = codes_col.find_one({"code": text})
+    if not code_data:
+        return
+
+    # Expiry check
+    if code_data["expire_at"] < get_time():
+        return await message.reply_text("❌ This code has expired!")
+
+    # User limit check
+    if len(code_data["used_by"]) >= code_data["user_limit"]:
+        return await message.reply_text("❌ Code usage limit reached!")
+
+    # Per user check
+    if code_data["used_by"].count(user_id) >= code_data["per_user"]:
+        return await message.reply_text("❌ You already used this code!")
+
+    # Active premium check
+    user = users_col.find_one({"user_id": user_id})
+    if user.get("premium_active_till") and user["premium_active_till"] > get_time():
+        return await message.reply_text("❌ You already have active premium!")
+
+    # Activate premium (default 30 days)
+    active_till = get_time() + datetime.timedelta(days=30)
+
+    users_col.update_one(
+        {"user_id": user_id},
+        {"$set": {"premium_active_till": active_till}}
+    )
+
+    codes_col.update_one(
+        {"code": text},
+        {"$push": {"used_by": user_id}}
+    )
+
+    await client.send_message(
+        LOG_GROUP_ID,
+        f"🎟 **Redeem Code Used**\n\n"
+        f"👤 User: @{message.from_user.username}\n"
+        f"🆔 ID: `{user_id}`\n"
+        f"🔑 Code: `{text}`\n"
+        f"⏰ Time: `{get_time()}`"
+    )
+
+    await message.reply_text(
+        "✅ **Premium Activated via Redeem Code!**\n"
+        f"⏳ Active till: `{active_till}`",
+        reply_markup=main_menu()
+        )
+# ================= BROADCAST ================= #
 
 @app.on_message(filters.command("broadcast"))
-async def broadcast(_, m):
-    if not is_admin(m.from_user.id):
+async def broadcast_handler(client, message):
+    if not is_owner(message.from_user.id):
         return
-    pin = "-pin" in m.text
-    text = m.text.replace("/broadcast", "").replace("-pin", "").strip()
 
-    for u in users_col.find():
+    if len(message.command) < 2:
+        return await message.reply_text("❌ Use: `/broadcast your message`")
+
+    text = message.text.split(None, 1)[1]
+    sent = 0
+    failed = 0
+
+    for user in users_col.find():
         try:
-            msg = await app.send_message(u["_id"], text)
-            if pin:
-                await msg.pin()
+            await client.send_message(
+                user["user_id"],
+                text
+            )
+            sent += 1
         except:
-            pass
-    await m.reply("✅ Broadcast done")
+            failed += 1
 
-@app.on_message(filters.command("addreward") & filters.user(OWNER_ID))
-async def addreward(_, m):
-    _, need, limit, deduct = m.command
-    settings_col.update_one(
-        {"_id": "config"},
-        {"$set": {
-            "reward_need": int(need),
-            "claim_limit": int(limit),
-            "reward_deduct": int(deduct)
-        }}
-    )
-    await m.reply("✅ Reward updated")
-
-@app.on_message(filters.command("addsudouser") & filters.user(OWNER_ID))
-async def addsudo(_, m):
-    uid = int(m.command[1])
-    sudo_col.update_one({"_id": uid}, {"$set": {"_id": uid}}, upsert=True)
-    await m.reply("✅ Sudo added")
-
-@app.on_message(filters.command("rmsudouser") & filters.user(OWNER_ID))
-async def rmsudo(_, m):
-    sudo_col.delete_one({"_id": int(m.command[1])})
-    await m.reply("✅ Sudo removed")
-
-@app.on_message(filters.command("stats") & filters.user(OWNER_ID))
-async def stats(_, m):
-    await m.reply(
-        f"📊 Stats\nUsers: {users_col.count_documents({})}\nFiles: {files_col.count_documents({})}"
+    await message.reply_text(
+        f"📢 **Broadcast Completed**\n\n"
+        f"✅ Sent: `{sent}`\n"
+        f"❌ Failed: `{failed}`"
     )
 
-@app.on_message(filters.command("userlist") & filters.user(OWNER_ID))
-async def userlist(_, m):
-    txt = ""
-    for u in users_col.find():
-        txt += f"{u['_id']} | Ref:{u['ref']} | Bonus:{u['bonus']} | Claimed:{u['claimed']}\n"
-    await m.reply(txt or "No users")
 
-@app.on_message(filters.command("banuser") & filters.user(OWNER_ID))
-async def ban(_, m):
-    users_col.update_one({"_id": int(m.command[1])}, {"$set": {"banned": True}})
-    await m.reply("✅ User banned")
+# ================= BROADCAST PIN ================= #
 
-@app.on_message(filters.command("unban") & filters.user(OWNER_ID))
-async def unban(_, m):
-    users_col.update_one({"_id": int(m.command[1])}, {"$set": {"banned": False}})
-    await m.reply("✅ User unbanned")
+@app.on_message(filters.command("broadcastpin"))
+async def broadcast_pin_handler(client, message):
+    if not is_owner(message.from_user.id):
+        return
 
-print("🔥 Bot Started Successfully")
+    if len(message.command) < 2:
+        return await message.reply_text("❌ Use: `/broadcastpin your message`")
+
+    text = message.text.split(None, 1)[1]
+    sent = 0
+    failed = 0
+
+    for user in users_col.find():
+        try:
+            msg = await client.send_message(
+                user["user_id"],
+                text
+            )
+            await msg.pin(disable_notification=True)
+            sent += 1
+        except:
+            failed += 1
+
+    await message.reply_text(
+        f"📌 **Broadcast Pin Completed**\n\n"
+        f"✅ Sent & Pinned: `{sent}`\n"
+        f"❌ Failed: `{failed}`"
+    )
+# ================= STATS ================= #
+
+@app.on_message(filters.command("stats"))
+async def stats_handler(client, message):
+    if not is_owner(message.from_user.id):
+        return
+
+    now = get_time()
+    today = now - datetime.timedelta(days=1)
+    week = now - datetime.timedelta(days=7)
+    month = now - datetime.timedelta(days=30)
+
+    total_users = users_col.count_documents({})
+    today_claims = history_col.count_documents({"time": {"$gte": today}})
+    week_claims = history_col.count_documents({"time": {"$gte": week}})
+    month_claims = history_col.count_documents({"time": {"$gte": month}})
+
+    text = (
+        "📊 **Bot Statistics**\n\n"
+        f"👥 Total Users: `{total_users}`\n\n"
+        f"🎁 Claims Today: `{today_claims}`\n"
+        f"🎁 Claims This Week: `{week_claims}`\n"
+        f"🎁 Claims This Month: `{month_claims}`"
+    )
+
+    await message.reply_text(text)
+# ================= USERS LIST ================= #
+
+@app.on_message(filters.command("users"))
+async def users_handler(client, message):
+    if not is_owner(message.from_user.id):
+        return
+
+    text = "👥 **Users List**\n\n"
+    count = 0
+
+    for user in users_col.find():
+        count += 1
+        premium = user.get("premium_active_till")
+        status = "Active" if premium and premium > get_time() else "No"
+
+        text += (
+            f"{count}. @{user.get('username','NoUsername')} | "
+            f"ID: `{user['user_id']}` | "
+            f"Refs: `{user.get('referrals',0)}` | "
+            f"Claims: `{user.get('claimed',0)}` | "
+            f"Premium: `{status}`\n"
+        )
+
+        if count % 20 == 0:
+            await message.reply_text(text)
+            text = ""
+
+    if text:
+        await message.reply_text(text)
+# ================= HISTORY ================= #
+
+@app.on_message(filters.command("history"))
+async def history_handler(client, message):
+    if not is_owner(message.from_user.id):
+        return
+
+    now = get_time() - datetime.timedelta(days=30)
+    total_claims = history_col.count_documents({"time": {"$gte": now}})
+
+    # Top referrer
+    top = users_col.find().sort("referrals", -1).limit(1)
+    top_user = next(top, None)
+
+    text = (
+        "📜 **Monthly History**\n\n"
+        f"🎁 Total Claims (30 days): `{total_claims}`\n\n"
+    )
+
+    if top_user:
+        text += (
+            "🏆 **Top Referrer**\n"
+            f"👤 @{top_user.get('username','NoUsername')}\n"
+            f"👥 Referrals: `{top_user.get('referrals',0)}`"
+        )
+
+    await message.reply_text(text)
+# ================= HELP ================= #
+
+@app.on_message(filters.command("help"))
+async def help_handler(client, message):
+    if not is_owner(message.from_user.id):
+        return
+
+    text = (
+        "🆘 **Admin Commands Help**\n\n"
+        "/addpremium <amount> <refs> <time> <per_user> <months>\n"
+        "/rmpremium\n\n"
+        "/gencode <per_user> <user_limit> <time>\n"
+        "/rmcode <CODE>\n\n"
+        "/broadcast <message>\n"
+        "/broadcastpin <message>\n\n"
+        "/stats\n"
+        "/users\n"
+        "/history\n"
+    )
+
+    await message.reply_text(text)
+# ================= START BOT ================= #
+
+print("🔥 DEVIL BOT STARTED SUCCESSFULLY 🔥 ENJOY IT BABY 🥵🔥")
+
 app.run()
