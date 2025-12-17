@@ -132,7 +132,13 @@ async def start_handler(client, message):
 @app.on_callback_query(filters.regex("back_menu"))
 async def back_menu(client, callback_query):
     await callback_query.message.edit_text(
-        "🏠 **Main Menu**",
+        "👋 **Welcome to Premium Giveaway Bot!**\n\n"
+        "🎁 Earn premium by referring users\n"
+        "🚀 Simple & fast claiming system\n\n"
+        "📢 **How it works:**\n"
+        "• Share referral link\n"
+        "• Complete required referrals\n"
+        "• Claim premium reward\n\n",
         reply_markup=main_menu()
 )
 # ================= REFERRAL SYSTEM ================= #
@@ -192,7 +198,7 @@ async def start_handler(client, message):
         "👋 **Welcome to Premium Giveaway Bot!**\n\n"
         "🎁 Earn premium by referring users\n"
         "🚀 Simple & fast claiming system\n\n"
-        f"🔗 [Read Full Info]({START_TELEGRAPH})"
+        f"🔥 [DEVLOPER]({START_TELEGRAPH})"
     )
 
     await message.reply_text(
@@ -586,7 +592,67 @@ async def redeem_code_handler(client, message):
         f"⏳ Active till: `{active_till}`",
         reply_markup=main_menu()
         )
-# ================= BROADCAST ================= #
+# ================= REDEEM COMMAND ================= #
+
+@app.on_message(filters.command("redeem"))
+async def redeem_command(client, message):
+    user_id = message.from_user.id
+
+    if len(message.command) != 2:
+        return await message.reply_text(
+            "❌ **Wrong Format**\n\nUse:\n`/redeem CODE`"
+        )
+
+    code = message.command[1].upper()
+    code_data = codes_col.find_one({"code": code})
+
+    if not code_data:
+        return await message.reply_text("❌ Invalid redeem code!")
+
+    # Expiry check
+    if code_data["expire_at"] < get_time():
+        return await message.reply_text("❌ This code has expired!")
+
+    # User limit check
+    if len(code_data["used_by"]) >= code_data["user_limit"]:
+        return await message.reply_text("❌ Code usage limit reached!")
+
+    # Per user check
+    if user_id in code_data["used_by"]:
+        return await message.reply_text("❌ You already used this code!")
+
+    user = users_col.find_one({"user_id": user_id})
+
+    if user.get("premium_active_till") and user["premium_active_till"] > get_time():
+        return await message.reply_text("❌ You already have active premium!")
+
+    # Activate premium (30 days default)
+    active_till = get_time() + datetime.timedelta(days=30)
+
+    users_col.update_one(
+        {"user_id": user_id},
+        {"$set": {"premium_active_till": active_till}}
+    )
+
+    codes_col.update_one(
+        {"code": code},
+        {"$push": {"used_by": user_id}}
+    )
+
+    await client.send_message(
+        LOG_GROUP_ID,
+        f"🎟 **Redeem Used**\n\n"
+        f"👤 @{message.from_user.username}\n"
+        f"🆔 `{user_id}`\n"
+        f"🔑 `{code}`\n"
+        f"⏰ `{get_time()}`"
+    )
+
+    await message.reply_text(
+        "✅ **Premium Activated Successfully!**\n\n"
+        f"⏳ Active till: `{active_till}`"
+    )
+#================= BROADCAST ================= #
 
 @app.on_message(filters.command("broadcast"))
 async def broadcast_handler(client, message):
