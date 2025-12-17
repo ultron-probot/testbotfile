@@ -79,7 +79,27 @@ def force_join_keyboard():
 
     buttons.append([InlineKeyboardButton("✅ VERIFY", callback_data="verify_join")])
     return InlineKeyboardMarkup(buttons)
-    
+
+# ================= VERIFY FORCE JOIN ================= #
+
+@app.on_callback_query(filters.regex("verify_join"))
+async def verify_join(client, callback_query):
+    user_id = callback_query.from_user.id
+
+    if await is_joined_all(client, user_id):
+        try:
+            await callback_query.message.edit_text(
+                "✅ **Verification Successful!**\nWelcome 👇",
+                reply_markup=main_menu()
+            )
+        except:
+            pass
+    else:
+        await callback_query.answer(
+            "❌ Join all channels first!",
+            show_alert=True
+        )
+        
 # ================= START & MENU ================= #
 
 def main_menu():
