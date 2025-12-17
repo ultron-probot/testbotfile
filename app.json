@@ -1,57 +1,47 @@
 {
-  "name": "Telegram Reward & File Sharing Bot",
-  "description": "Telegram bot with referral rewards, force join, admin panel, MongoDB storage and secure file sharing system",
-  "repository": "https://github.com/yourusername/your-repo-name",
+  "name": "Devil Telegram Bot",
+  "description": "Simple MongoDB based Telegram Bot",
   "keywords": [
     "telegram",
     "pyrogram",
-    "reward-bot",
-    "file-sharing-bot",
     "mongodb",
-    "heroku"
+    "bot"
   ],
   "env": {
     "API_ID": {
-      "description": "Telegram API ID from my.telegram.org (numeric)",
+      "description": "Telegram API ID",
       "required": true
     },
     "API_HASH": {
-      "description": "Telegram API HASH from my.telegram.org",
+      "description": "Telegram API HASH",
       "required": true
     },
     "BOT_TOKEN": {
-      "description": "Bot token from @BotFather",
+      "description": "Telegram Bot Token",
       "required": true
     },
-    "OWNER_ID": {
-      "description": "Numeric Telegram user ID of bot owner",
+    "MONGO_URL": {
+      "description": "MongoDB Atlas Connection URL",
       "required": true
     },
-    "LOG_GROUP": {
-      "description": "Log group or channel ID (example: -100xxxxxxxxxx). Bot must be admin.",
+    "OWNER_IDS": {
+      "description": "Owner IDs (comma separated)",
+      "required": true,
+      "value": "123456789"
+    },
+    "LOG_GROUP_ID": {
+      "description": "Log group ID (start with -100)",
       "required": true
     },
-    "START_IMAGE": {
-      "description": "Telegraph image link for /start message",
-      "required": true
+    "SUPPORT_GROUP": {
+      "description": "Support group link",
+      "required": false,
+      "value": "https://t.me/yourgroup"
     },
-    "JOIN1": {
-      "description": "Force join channel/group link 1 (optional)",
+    "START_TELEGRAPH": {
+      "description": "Start telegraph image link",
       "required": false
     },
-    "JOIN2": {
-      "description": "Force join channel/group link 2 (optional)",
-      "required": false
-    },
-    "JOIN3": {
-      "description": "Force join channel/group link 3 (optional)",
-      "required": false
-    },
-    "MONGO_URI": {
-      "description": "MongoDB Atlas connection URI",
-      "required": true
-    }
-  },
   "buildpacks": [
     {
       "url": "heroku/python"
