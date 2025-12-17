@@ -39,9 +39,14 @@
       "value": "https://t.me/yourgroup"
     },
     "START_TELEGRAPH": {
-      "description": "Start telegraph image link",
+      "description": "Start telegraph link",
       "required": false
     },
+    "BOT_USERNAME": {
+      "description": "Bot username without @",
+      "required": true
+    }
+  },
   "buildpacks": [
     {
       "url": "heroku/python"
