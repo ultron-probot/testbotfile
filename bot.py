@@ -683,10 +683,15 @@ async def redeem_command(client, message):
         f"⏰ `{get_time()}`"
     )
 
-    await message.reply_text(
-        "✅ **Premium Activated Successfully!**\n\n"
-        f"⏳ Active till: `{active_till}`"
-    )
+    users_col.update_one(
+    {"user_id": user_id},
+    {"$set": {"awaiting_email": True}}
+)
+
+await message.reply_text(
+    "🎉 **You have claimed YouTube Premium!**\n\n"
+    "📧 **Now send your email address to activate your premium.**"
+)
 #================= BROADCAST ================= #
 
 @app.on_message(filters.command("broadcast"))
