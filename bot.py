@@ -275,7 +275,7 @@ async def get_premium(client, callback_query):
 
 # ================= EMAIL COLLECT ================= #
 
-@app.on_message(filters.text & ~filters.command)
+@app.on_message(filters.text & ~filters.command())
 async def email_handler(client, message):
     user_id = message.from_user.id
     user = users_col.find_one({"user_id": user_id})
