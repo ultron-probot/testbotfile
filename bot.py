@@ -70,13 +70,22 @@ async def is_joined_all(client, user_id):
         except Exception as e:
             return False
     return True
-
+    
 def force_join_keyboard():
-    buttons = []
-for ch in FORCE_CHANNELS:
-    buttons.append([InlineKeyboardButton("📢 Join", url="https://t.me/channel_username_here")])
+    join_buttons = []
 
-buttons.append([InlineKeyboardButton("✅ VERIFY", callback_data="verify_join")])
+    # 3 JOIN buttons ek hi row me
+    for _ in FORCE_CHANNELS:
+        join_buttons.append(
+            InlineKeyboardButton("📢 Join", url="https://t.me/channel_username_here")
+        )
+
+    keyboard = [
+        join_buttons,  # 👈 ek hi line me sab join buttons
+        [InlineKeyboardButton("✅ VERIFY", callback_data="verify_join")]
+    ]
+
+    return InlineKeyboardMarkup(keyboard)
 # ================= VERIFY FORCE JOIN ================= #
 
 @app.on_callback_query(filters.regex("verify_join"))
