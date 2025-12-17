@@ -23,6 +23,13 @@ LOG_GROUP_ID = int(os.getenv("LOG_GROUP_ID", "-1001234567890"))
 SUPPORT_GROUP = os.getenv("SUPPORT_GROUP", "https://t.me/yourgroup")
 START_TELEGRAPH = os.getenv("START_TELEGRAPH", "https://telegra.ph/Welcome")
 
+# ================= FORCE JOIN CONFIG ================= #
+
+FORCE_CHANNELS = [
+    "@channel1username",
+    "@channel2username",
+    "@channel3username"
+]
 BOT_USERNAME = os.getenv("BOT_USERNAME", "YourBotUsername")
 
 # ================= BOT ================= #
@@ -52,7 +59,27 @@ def is_owner(user_id: int) -> bool:
 def get_time():
     return datetime.datetime.utcnow()
 
+# ================= FORCE JOIN HELPERS ================= #
 
+async def is_joined_all(client, user_id):
+    for ch in FORCE_CHANNELS:
+        try:
+            member = await client.get_chat_member(ch, user_id)
+            if member.status not in ["member", "administrator", "creator"]:
+                return False
+        except:
+            return False
+    return True
+
+
+def force_join_keyboard():
+    buttons = []
+    for ch in FORCE_CHANNELS:
+        buttons.append([InlineKeyboardButton("📢 Join", url=f"https://t.me/{ch.replace('@','')}")])
+
+    buttons.append([InlineKeyboardButton("✅ VERIFY", callback_data="verify_join")])
+    return InlineKeyboardMarkup(buttons)
+    
 # ================= START & MENU ================= #
 
 def main_menu():
