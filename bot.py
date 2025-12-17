@@ -26,9 +26,9 @@ START_TELEGRAPH = os.getenv("START_TELEGRAPH", "https://telegra.ph/Welcome")
 # ================= FORCE JOIN CONFIG ================= #
 
 FORCE_CHANNELS = [
-    -1001234567890,
-    -1001234567891,
-    -1001234567892
+    -1003414102418,
+    -1003414102418,
+    -1003414102418
 ]
 BOT_USERNAME = os.getenv("BOT_USERNAME", "YourBotUsername")
 
