@@ -26,9 +26,9 @@ START_TELEGRAPH = os.getenv("START_TELEGRAPH", "https://telegra.ph/Welcome")
 # ================= FORCE JOIN CONFIG ================= #
 
 FORCE_CHANNELS = [
-    "A2globalupdate",
-    "A2globalupdate",
-    "A2globalupdate"
+    -1001234567890,
+    -1001234567891,
+    -1001234567892
 ]
 BOT_USERNAME = os.getenv("BOT_USERNAME", "YourBotUsername")
 
@@ -62,24 +62,21 @@ def get_time():
 # ================= FORCE JOIN HELPERS ================= #
 
 async def is_joined_all(client, user_id):
-    for ch in FORCE_CHANNELS:
+    for chat_id in FORCE_CHANNELS:
         try:
-            member = await client.get_chat_member(ch, user_id)
-            if member.status not in ["member", "administrator", "creator"]:
+            member = await client.get_chat_member(chat_id, user_id)
+            if member.status == "left":
                 return False
-        except:
+        except Exception as e:
             return False
     return True
 
-
 def force_join_keyboard():
     buttons = []
-    for ch in FORCE_CHANNELS:
-        buttons.append([InlineKeyboardButton("📢 Join", url=f"https://t.me/{ch.replace('@','')}")])
+for ch in FORCE_CHANNELS:
+    buttons.append([InlineKeyboardButton("📢 Join", url="https://t.me/channel_username_here")])
 
-    buttons.append([InlineKeyboardButton("✅ VERIFY", callback_data="verify_join")])
-    return InlineKeyboardMarkup(buttons)
-
+buttons.append([InlineKeyboardButton("✅ VERIFY", callback_data="verify_join")])
 # ================= VERIFY FORCE JOIN ================= #
 
 @app.on_callback_query(filters.regex("verify_join"))
