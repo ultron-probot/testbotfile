@@ -138,14 +138,7 @@ async def start_handler(client, message):
     user_id = user.id
     username = user.username or "NoUsername"
 
-    # 🔒 FORCE JOIN CHECK
-    if not await is_joined_all(client, user_id):
-        return await message.reply_text(
-            "🔒 **Please join all required channels to use this bot**",
-            reply_markup=force_join_keyboard()
-        )
-
-    # 🔗 Referral parameter
+    # 🔗 Referral parameter (FIRST)
     referrer_id = None
     if len(message.command) > 1:
         try:
@@ -155,17 +148,7 @@ async def start_handler(client, message):
 
     user_data = users_col.find_one({"user_id": user_id})
 
-    # 📢 LOG EVERY START (new + old user)
-    await client.send_message(
-        LOG_GROUP_ID,
-        f"🚀 **User Started Bot**\n\n"
-        f"👤 @{username}\n"
-        f"🆔 `{user_id}`\n"
-        f"👥 Referred by: `{referrer_id}`\n"
-        f"⏰ `{get_time()}`"
-    )
-
-    # 🆕 New user insert
+    # 🆕 NEW USER INSERT + REFERRAL COUNT
     if not user_data:
         users_col.insert_one({
             "user_id": user_id,
@@ -177,7 +160,7 @@ async def start_handler(client, message):
             "join_date": get_time()
         })
 
-        # ✅ REFERRAL COUNT FIX
+        # ✅ REFERRAL COUNT (FIXED)
         if referrer_id and referrer_id != user_id:
             referrer = users_col.find_one({"user_id": referrer_id})
             if referrer:
@@ -194,24 +177,35 @@ async def start_handler(client, message):
                 except:
                     pass
 
-    # 🎉 Welcome message
-    text = (
+    # 🔒 FORCE JOIN CHECK (AFTER REFERRAL)
+    if not await is_joined_all(client, user_id):
+        return await message.reply_text(
+            "🔒 **Please join all required channels to use this bot**",
+            reply_markup=force_join_keyboard()
+        )
+
+    # 📢 LOG EVERY START
+    await client.send_message(
+        LOG_GROUP_ID,
+        f"🚀 **User Started Bot**\n\n"
+        f"👤 @{username}\n"
+        f"🆔 `{user_id}`\n"
+        f"👥 Referred by: `{referrer_id}`\n"
+        f"⏰ `{get_time()}`"
+    )
+
+    # 🎉 Welcome
+    await message.reply_text(
         "👋 **Welcome to Premium Giveaway Bot!**\n\n"
         "🎁 Earn premium by referring users\n"
         "🚀 Simple & fast claiming system\n\n"
         "📢 **How it works:**\n"
         "• Share referral link\n"
         "• Complete required referrals\n"
-        "• Claim premium reward\n\n"
-        f"🔥[DEVLOPER]({START_TELEGRAPH})"
-    )
-
-    await message.reply_text(
-        text,
+        "• Claim premium reward\n\n",
         reply_markup=main_menu(),
         disable_web_page_preview=True
     )
-
 
 # ================= BACK TO MENU ================= #
 
