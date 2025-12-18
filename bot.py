@@ -99,27 +99,26 @@ async def verify_join(client, callback_query):
     user_id = callback_query.from_user.id
 
     if await is_joined_all(client, user_id):
-    if await is_joined_all(client, user_id):
-    try:
-        await callback_query.message.edit_text(
-            "✅ **𝐘𝐎𝐔𝐑 𝐕𝐄𝐑𝐈𝐅𝐈𝐂𝐀𝐓𝐈𝐎𝐍 𝐒𝐔𝐂𝐂𝐄𝐒𝐒𝐅𝐔𝐋 😉!!**\n\n"
-            "👋 ᴡᴇʟᴄᴏᴍᴇ ᴛᴏ ᴘʀᴇᴍɪᴜᴍ ɢɪᴠᴇᴀᴡᴀʏ ʙᴏᴛ!\n\n"
-            "🎁 ᴇᴀʀɴ ᴘʀᴇᴍɪᴜᴍ ʙʏ ʀᴇғᴇʀʀɪɴɢ ᴜsᴇʀs\n"
-            "🚀 sɪᴍᴘʟᴇ & ғᴀsᴛ ᴄʟᴀɪᴍɪɴɢ sʏsᴛᴇᴍ\n\n"
-            "📢 **ʜᴏᴡ ɪᴛ ᴡᴏʀᴋs:**\n"
-            "• sʜᴀʀᴇ ʀᴇғᴇʀʀᴀʟ ʟɪɴᴋ\n"
-            "• ᴄᴏᴍᴘʟᴇᴛᴇ ʀᴇǫᴜɪʀᴇᴅ ʀᴇғᴇʀʀᴀʟs ᴛᴏ ᴄʟᴀɪᴍ ᴘʀᴇᴍɪᴜᴍ\n"
-            "• ᴄʟᴀɪᴍ ᴘʀᴇᴍɪᴜᴍ ʀᴇᴡᴀʀᴅ\n\n"
-            "👇 **ᴄʜᴏᴏsᴇ ᴀɴ ᴏᴘᴛɪᴏɴ ʙᴇʟᴏᴡ:**",
-            reply_markup=main_menu()
-        )
-    except:
-        pass
+        try:
+            await callback_query.message.edit_text(
+                "✅ **𝐘𝐎𝐔𝐑 𝐕𝐄𝐑𝐈𝐅𝐈𝐂𝐀𝐓𝐈𝐎𝐍 𝐒𝐔𝐂𝐂𝐄𝐒𝐒𝐅𝐔𝐋 😉!!**\n\n"
+                "👋 ᴡᴇʟᴄᴏᴍᴇ ᴛᴏ ᴘʀᴇᴍɪᴜᴍ ɢɪᴠᴇᴀᴡᴀʏ ʙᴏᴛ!\n\n"
+                "🎁 ᴇᴀʀɴ ᴘʀᴇᴍɪᴜᴍ ʙʏ ʀᴇғᴇʀʀɪɴɢ ᴜsᴇʀs\n"
+                "🚀 sɪᴍᴘʟᴇ & ғᴀsᴛ ᴄʟᴀɪᴍɪɴɢ sʏsᴛᴇᴍ\n\n"
+                "📢 **ʜᴏᴡ ɪᴛ ᴡᴏʀᴋs:**\n"
+                "• sʜᴀʀᴇ ʀᴇғᴇʀʀᴀʟ ʟɪɴᴋ\n"
+                "• ᴄᴏᴍᴘʟᴇᴛᴇ ʀᴇǫᴜɪʀᴇᴅ ʀᴇғᴇʀʀᴀʟs ᴛᴏ ᴄʟᴀɪᴍ ᴘʀᴇᴍɪᴜᴍ\n"
+                "• ᴄʟᴀɪᴍ ᴘʀᴇᴍɪᴜᴍ ʀᴇᴡᴀʀᴅ\n\n"
+                "👇 **ᴄʜᴏᴏsᴇ ᴀɴ ᴏᴘᴛɪᴏɴ ʙᴇʟᴏᴡ:**",
+                reply_markup=main_menu()
+            )
+        except:
+            pass
     else:
         await callback_query.answer(
             "❌ Join all channels first!",
             show_alert=True
-        )
+)
         
 # ================= START & MENU ================= #
 
