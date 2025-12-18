@@ -58,6 +58,7 @@ users_col = db["users"]
 premium_col = db["premium"]
 codes_col = db["codes"]
 history_col = db["history"]
+groups_col = db["groups"]
 
 # ================= HELPERS ================= #
 
@@ -405,6 +406,24 @@ async def profile_handler(client, callback_query):
             [[InlineKeyboardButton("⬅️ ʙᴀᴄᴋ", callback_data="back_menu")]]
         )
         )
+# ================= GROUP TRACKING ================= #
+
+@app.on_message(filters.new_chat_members)
+async def added_to_group(client, message):
+    for user in message.new_chat_members:
+        if user.is_self:
+            groups_col.update_one(
+                {"chat_id": message.chat.id},
+                {
+                    "$set": {
+                        "chat_id": message.chat.id,
+                        "title": message.chat.title,
+                        "added_at": get_time()
+                    }
+                },
+                upsert=True
+)
+
 # ================= TIME PARSER ================= #
 
 def parse_time(text):
@@ -687,63 +706,84 @@ async def redeem_command(client, message):
 #================= BROADCAST ================= #
 
 @app.on_message(filters.command("broadcast"))
+@app.on_message(filters.command("broadcast") & filters.user(OWNER_IDS))
 async def broadcast_handler(client, message):
-    if not is_owner(message.from_user.id):
-        return
+    # 🔹 Broadcast content
+    if message.reply_to_message:
+        content = message.reply_to_message
+    else:
+        if len(message.command) < 2:
+            return await message.reply_text(
+                "❌ Use:\n"
+                "`/broadcast your message`\n"
+                "OR reply to any message with `/broadcast`"
+            )
+        content = message.text.split(" ", 1)[1]
 
-    if len(message.command) < 2:
-        return await message.reply_text("❌ Use: `/broadcast your message`")
-
-    text = message.text.split(None, 1)[1]
     sent = 0
     failed = 0
 
+    # 🔹 Users
     for user in users_col.find():
         try:
-            await client.send_message(
-                user["user_id"],
-                text
-            )
+            if message.reply_to_message:
+                await content.copy(user["user_id"])
+            else:
+                await client.send_message(user["user_id"], content)
+            sent += 1
+        except:
+            failed += 1
+
+    # 🔹 Groups
+    for group in groups_col.find():
+        try:
+            if message.reply_to_message:
+                await content.copy(group["chat_id"])
+            else:
+                await client.send_message(group["chat_id"], content)
             sent += 1
         except:
             failed += 1
 
     await message.reply_text(
-        f"📢 **Broadcast Completed**\n\n"
-        f"✅ Sent: `{sent}`\n"
+        f"✅ **Broadcast Completed**\n\n"
+        f"📤 Sent: `{sent}`\n"
         f"❌ Failed: `{failed}`"
-    )
-
+)
 
 # ================= BROADCAST PIN ================= #
 
-@app.on_message(filters.command("broadcastpin"))
+@app.on_message(filters.command("broadcastpin") & filters.user(OWNER_IDS))
 async def broadcast_pin_handler(client, message):
-    if not is_owner(message.from_user.id):
-        return
+    if not message.reply_to_message:
+        return await message.reply_text(
+            "❌ Reply to a message to broadcast & pin it."
+        )
 
-    if len(message.command) < 2:
-        return await message.reply_text("❌ Use: `/broadcastpin your message`")
-
-    text = message.text.split(None, 1)[1]
+    content = message.reply_to_message
     sent = 0
-    failed = 0
 
+    # 🔹 USERS
     for user in users_col.find():
         try:
-            msg = await client.send_message(
-                user["user_id"],
-                text
-            )
+            msg = await content.copy(user["user_id"])
             await msg.pin(disable_notification=True)
             sent += 1
         except:
-            failed += 1
+            pass
+
+    # 🔹 GROUPS
+    for group in groups_col.find():
+        try:
+            msg = await content.copy(group["chat_id"])
+            await msg.pin(disable_notification=True)
+            sent += 1
+        except:
+            pass
 
     await message.reply_text(
-        f"📌 **Broadcast Pin Completed**\n\n"
-        f"✅ Sent & Pinned: `{sent}`\n"
-        f"❌ Failed: `{failed}`"
+        f"📌 **Broadcast Pinned Successfully**\n\n"
+        f"📤 Total chats: `{sent}`"
     )
 # ================= STATS ================= #
 
