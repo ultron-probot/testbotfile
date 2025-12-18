@@ -28,15 +28,15 @@ START_TELEGRAPH = os.getenv("START_TELEGRAPH", "https://telegra.ph/Welcome")
 # 🔒 Force join verify (IDs only)
 FORCE_CHANNELS = [
     -1003414102418,
-    -1003414102418,
-    -1003414102418
+    -1003206086230,
+    -1003393240078
 ]
 
 # 🔗 Force join buttons (links only)
 FORCE_JOIN_LINKS = [
     "https://t.me/A2globalupdate",
-    "https://t.me/A2globalupdate",
-    "https://t.me/A2globalupdate"
+    "https://t.me/Nitesh_Hub",
+    "https://t.me/+O3pqAiwEZ29hN2Y9"
 ]
 BOT_USERNAME = os.getenv("BOT_USERNAME", "YourBotUsername")
 
@@ -134,7 +134,7 @@ def main_menu():
                 InlineKeyboardButton("💬 sᴜᴘᴘᴏʀᴛ", url=SUPPORT_GROUP)
             ],
             [
-                InlineKeyboardButton("💌h ᴅᴇᴠᴇʟᴏᴘᴇʀ", url=f"https://t.me/Ankitgupta2144")
+                InlineKeyboardButton("💌 ᴅᴇᴠᴇʟᴏᴘᴇʀ", url=f"https://t.me/Ankitgupta2144")
             ]
         ]
     )
