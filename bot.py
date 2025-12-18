@@ -205,15 +205,18 @@ async def start_handler(client, message):
 
     # 🎉 Welcome
     await message.reply_text(
-        "👋 ᴡᴇʟᴄᴏᴍᴇ ᴛᴏ ᴘʀᴇᴍɪᴜᴍ ɢɪᴠᴇᴀᴡᴀʏ ʙᴏᴛ!\n\n"
-            "🎁 ᴇᴀʀɴ ᴘʀᴇᴍɪᴜᴍ ʙʏ ʀᴇғᴇʀʀɪɴɢ ᴜsᴇʀs\n"
-            "🚀 sɪᴍᴘʟᴇ & ғᴀsᴛ ᴄʟᴀɪᴍɪɴɢ sʏsᴛᴇᴍ\n\n"
-            "📢 **ʜᴏᴡ ɪᴛ ᴡᴏʀᴋs:**\n"
-            "• sʜᴀʀᴇ ʀᴇғᴇʀʀᴀʟ ʟɪɴᴋ\n"
-            "• ᴄᴏᴍᴘʟᴇᴛᴇ ʀᴇǫᴜɪʀᴇᴅ ʀᴇғᴇʀʀᴀʟs ᴛᴏ ᴄʟᴀɪᴍ ᴘʀᴇᴍɪᴜᴍ\n"
-            "• ᴄʟᴀɪᴍ ᴘʀᴇᴍɪᴜᴍ ʀᴇᴡᴀʀᴅ\n\n"
-        reply_markup=main_menu(),
-        disable_web_page_preview=True
+    """👋 ᴡᴇʟᴄᴏᴍᴇ ᴛᴏ ᴘʀᴇᴍɪᴜᴍ ɢɪᴠᴇᴀᴡᴀʏ ʙᴏᴛ!
+
+🎁 ᴇᴀʀɴ ᴘʀᴇᴍɪᴜᴍ ʙʏ ʀᴇғᴇʀʀɪɴɢ ᴜsᴇʀs
+🚀 sɪᴍᴘʟᴇ & ғᴀsᴛ ᴄʟᴀɪᴍɪɴɢ sʏsᴛᴇᴍ
+
+📢 **ʜᴏᴡ ɪᴛ ᴡᴏʀᴋs:**
+• sʜᴀʀᴇ ʀᴇғᴇʀʀᴀʟ ʟɪɴᴋ
+• ᴄᴏᴍᴘʟᴇᴛᴇ ʀᴇǫᴜɪʀᴇᴅ ʀᴇғᴇʀʀᴀʟs
+• ᴄʟᴀɪᴍ ᴘʀᴇᴍɪᴜᴍ ʀᴇᴡᴀʀᴅ
+""",
+    reply_markup=main_menu(),
+    disable_web_page_preview=True
     )
 
 # ================= BACK TO MENU ================= #
@@ -228,8 +231,8 @@ async def back_menu(client, callback_query):
             "📢 **ʜᴏᴡ ɪᴛ ᴡᴏʀᴋs:**\n"
             "• sʜᴀʀᴇ ʀᴇғᴇʀʀᴀʟ ʟɪɴᴋ\n"
             "• ᴄᴏᴍᴘʟᴇᴛᴇ ʀᴇǫᴜɪʀᴇᴅ ʀᴇғᴇʀʀᴀʟs ᴛᴏ ᴄʟᴀɪᴍ ᴘʀᴇᴍɪᴜᴍ\n"
-            "• ᴄʟᴀɪᴍ ᴘʀᴇᴍɪᴜᴍ ʀᴇᴡᴀʀᴅ\n\n"
-            reply_markup=main_menu()
+            "• ᴄʟᴀɪᴍ ᴘʀᴇᴍɪᴜᴍ ʀᴇᴡᴀʀᴅ\n\n",
+            reply_markup=main_menu()   # ✅ comma fixed
         )
     except:
         pass
@@ -307,41 +310,51 @@ async def get_premium(client, callback_query):
 
 
 # ================= EMAIL COLLECT ================= #
+# ================= EMAIL COLLECT ================= #
 
-@app.on_message(filters.text & ~filters.regex(r"^/"))
+@app.on_message(filters.text & ~filters.command)
 async def email_handler(client, message):
     user_id = message.from_user.id
     user = users_col.find_one({"user_id": user_id})
 
+    # 🔐 Only process if awaiting email
     if not user or not user.get("awaiting_email"):
         return
 
     email = message.text.strip()
-    giveaway = premium_col.find_one({"active": True})
 
+    giveaway = premium_col.find_one({"active": True})
     if not giveaway:
-        return await message.reply_text("ɢɪᴠᴇᴀᴡᴀʏ ᴇxᴘɪʀᴇᴅ ᴏʀ ɴᴏᴛ ᴀᴠᴀɪʟᴀʙʟᴇ ʀɪɢʜᴛ ɴᴏᴡ.")
+        await message.reply_text(
+            "❌ ɢɪᴠᴇᴀᴡᴀʏ ᴇxᴘɪʀᴇᴅ ᴏʀ ɴᴏᴛ ᴀᴠᴀɪʟᴀʙʟᴇ."
+        )
+        return
 
     active_till = get_time() + datetime.timedelta(
         days=giveaway["active_days"]
     )
 
-    # Update user
+    # 🚫 Prevent negative referrals
+    new_referrals = max(
+        0,
+        user.get("referrals", 0) - giveaway["required_refs"]
+    )
+
     users_col.update_one(
         {"user_id": user_id},
         {
             "$set": {
                 "premium_active_till": active_till,
-                "awaiting_email": False
+                "awaiting_email": False,
+                "referrals": new_referrals
             },
             "$inc": {
-                "referrals": -giveaway["required_refs"],
                 "claimed": 1
             }
         }
     )
 
-    # Save history
+    # 📜 Save history
     history_col.insert_one({
         "user_id": user_id,
         "email": email,
@@ -349,21 +362,25 @@ async def email_handler(client, message):
         "time": get_time()
     })
 
-    # Log group
-    await client.send_message(
-        LOG_GROUP_ID,
-        f"🎉 **Pʀᴇᴍɪᴜᴍ Cʟᴀɪᴍᴇᴅ**\n\n"
-        f"👤 ᴜsᴇʀ: @{message.from_user.username}\n"
-        f"🆔 ɪᴅ: `{user_id}`\n"
-        f"📧 ᴇᴍᴀɪʟ: `{email}`\n"
-        f"🎁 ʀᴇᴡᴀʀᴅ: `{giveaway['reward']}`\n"
-        f"⏰ ᴛɪᴍᴇ: `{get_time()}`"
-    )
+    # 📢 Log group
+    try:
+        await client.send_message(
+            LOG_GROUP_ID,
+            f"🎉 **Pʀᴇᴍɪᴜᴍ Cʟᴀɪᴍᴇᴅ**\n\n"
+            f"👤 @{message.from_user.username}\n"
+            f"🆔 `{user_id}`\n"
+            f"📧 `{email}`\n"
+            f"🎁 `{giveaway['reward']}`\n"
+            f"⏰ `{get_time()}`"
+        )
+    except:
+        pass
 
     await message.reply_text(
-        "🎉 **ᴘʀᴇᴍɪᴜᴍ ᴄʟᴀɪᴍᴇᴅ sᴜᴄᴄᴇssғᴜʟʟʏ ᴏɴ ᴍᴀɪʟ!**\n\n"
+        "🎉 **ᴘʀᴇᴍɪᴜᴍ ᴄʟᴀɪᴍᴇᴅ sᴜᴄᴄᴇssғᴜʟʟʏ!**\n\n"
         "📧 ʏᴏᴜʀ ᴇᴍᴀɪʟ ʜᴀs ʙᴇᴇɴ sᴇɴᴛ ғᴏʀ ᴀᴄᴛɪᴠᴀᴛɪᴏɴ.\n"
-        "⏳ ᴘʟᴇᴀsᴇ ᴡᴀɪᴛ ᴀ ʜᴏᴜʀs ғᴏʀ ʏᴏᴜʀ ᴄᴏɴғɪʀᴍᴀᴛɪᴏɴ ʙᴇᴇɴ ᴄᴏᴍᴘʟᴇᴛᴇᴅ.",
+        "⏳ ᴘʟᴇᴀsᴇ ᴡᴀɪᴛ ᴀ ʜᴏᴜʀs ғᴏʀ ʏᴏᴜʀ ᴄᴏɴғɪʀᴍᴀᴛɪᴏɴ ʙᴇᴇɴ ᴄᴏᴍᴘʟᴇᴛᴇᴅ."
+        ,
         reply_markup=main_menu()
     )
 # ================= PROFILE ================= #
@@ -409,20 +426,52 @@ async def profile_handler(client, callback_query):
 
 @app.on_message(filters.new_chat_members)
 async def added_to_group(client, message):
-    for user in message.new_chat_members:
-        if user.is_self:
+    for member in message.new_chat_members:
+        if member.is_self:
+            chat = message.chat
+
             groups_col.update_one(
-                {"chat_id": message.chat.id},
+                {"chat_id": chat.id},
                 {
                     "$set": {
-                        "chat_id": message.chat.id,
-                        "title": message.chat.title,
+                        "chat_id": chat.id,
+                        "title": chat.title,
+                        "type": chat.type,
                         "added_at": get_time()
                     }
                 },
                 upsert=True
-)
+            )
 
+            # 📢 Log group add
+            try:
+                added_by = message.from_user
+                added_by_name = (
+                    f"@{added_by.username}"
+                    if added_by and added_by.username
+                    else added_by.first_name if added_by else "Unknown"
+                )
+
+                members = await client.get_chat_members_count(chat.id)
+
+                link = (
+                    f"https://t.me/{chat.username}"
+                    if chat.username
+                    else "Private Group"
+                )
+
+                await client.send_message(
+                    LOG_GROUP_ID,
+                    f"➕ **Bot Added To Group**\n\n"
+                    f"🏷 **Name:** {chat.title}\n"
+                    f"🆔 **ID:** `{chat.id}`\n"
+                    f"👥 **Members:** {members}\n"
+                    f"👤 **Added By:** {added_by_name}\n"
+                    f"🔗 **Link:** {link}\n"
+                    f"⏰ `{get_time()}`"
+                )
+            except:
+                pass
 # ================= TIME PARSER ================= #
 
 def parse_time(text):
