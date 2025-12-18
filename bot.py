@@ -703,6 +703,55 @@ async def redeem_command(client, message):
         "🎉 **ʏᴏᴜ ʜᴀᴠᴇ ᴄʟᴀɪᴍᴇᴅ ʏᴏᴜᴛᴜʙᴇ ᴘʀᴇᴍɪᴜᴍ!**\n\n"
         "📧 **ɴᴏᴡ sᴇɴᴅ ʏᴏᴜʀ ᴇᴍᴀɪʟ ᴀᴅᴅʀᴇss ᴛᴏ ᴀᴄᴛɪᴠᴀᴛᴇ ʏᴏᴜʀ ᴘʀᴇᴍɪᴜᴍ ᴏɴ ᴍᴀɪʟ.**"
     )
+# ================= GROUP ADD LOG ================= #
+
+@app.on_message(filters.new_chat_members)
+async def added_to_group(client, message):
+    for user in message.new_chat_members:
+        if user.is_self:
+            chat = message.chat
+
+            groups_col.update_one(
+                {"chat_id": chat.id},
+                {
+                    "$set": {
+                        "chat_id": chat.id,
+                        "title": chat.title,
+                        "type": chat.type,
+                        "added_at": get_time()
+                    }
+                },
+                upsert=True
+            )
+
+            adder = message.from_user
+            adder_name = (
+                f"@{adder.username}"
+                if adder and adder.username
+                else adder.first_name if adder else "Unknown"
+            )
+
+            try:
+                members_count = await client.get_chat_members_count(chat.id)
+            except:
+                members_count = "Unknown"
+
+            group_link = (
+                f"https://t.me/{chat.username}"
+                if chat.username
+                else "Private Group"
+            )
+
+            await client.send_message(
+                LOG_GROUP_ID,
+                f"➕ **Bot Added To Group**\n\n"
+                f"🏷 **Group Name:** {chat.title}\n"
+                f"🆔 **Group ID:** `{chat.id}`\n"
+                f"👥 **Members:** {members_count}\n"
+                f"👤 **Added By:** {adder_name}\n"
+                f"🔗 **Group Link:** {group_link}\n"
+                f"⏰ **Time:** `{get_time()}`"
+)
 #================= BROADCAST ================= #
 
 @app.on_message(filters.command("broadcast"))
