@@ -109,7 +109,7 @@ async def verify_join(client, callback_query):
             "• sʜᴀʀᴇ ʀᴇғᴇʀʀᴀʟ ʟɪɴᴋ\n"
             "• ᴄᴏᴍᴘʟᴇᴛᴇ ʀᴇǫᴜɪʀᴇᴅ ʀᴇғᴇʀʀᴀʟs ᴛᴏ ᴄʟᴀɪᴍ ᴘʀᴇᴍɪᴜᴍ\n"
             "• ᴄʟᴀɪᴍ ᴘʀᴇᴍɪᴜᴍ ʀᴇᴡᴀʀᴅ\n\n"
-            "👇 **Choose an option below:**",
+            "👇 **ᴄʜᴏᴏsᴇ ᴀɴ ᴏᴘᴛɪᴏɴ ʙᴇʟᴏᴡ:**",
             reply_markup=main_menu()
         )
     except:
@@ -639,7 +639,7 @@ async def redeem_command(client, message):
 
     # Expiry check
     if code_data["expire_at"] < get_time():
-        return await message.reply_text("❌ This code has expired!")
+        return await message.reply_text("🤐 ᴛʜɪs ᴄᴏᴅᴇ ʜᴀs ᴇxᴘɪʀᴇᴅ!")
 
     # User limit check
     if len(code_data["used_by"]) >= code_data["user_limit"]:
@@ -681,8 +681,8 @@ async def redeem_command(client, message):
     )
 
     await message.reply_text(
-        "🎉 **You have claimed YouTube Premium!**\n\n"
-        "📧 **Now send your email address to activate your premium.**"
+        "🎉 **ʏᴏᴜ ʜᴀᴠᴇ ᴄʟᴀɪᴍᴇᴅ ʏᴏᴜᴛᴜʙᴇ ᴘʀᴇᴍɪᴜᴍ!**\n\n"
+        "📧 **ɴᴏᴡ sᴇɴᴅ ʏᴏᴜʀ ᴇᴍᴀɪʟ ᴀᴅᴅʀᴇss ᴛᴏ ᴀᴄᴛɪᴠᴀᴛᴇ ʏᴏᴜʀ ᴘʀᴇᴍɪᴜᴍ ᴏɴ ᴍᴀɪʟ.**"
     )
 #================= BROADCAST ================= #
 
