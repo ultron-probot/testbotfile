@@ -308,11 +308,9 @@ async def get_premium(client, callback_query):
         {"$set": {"awaiting_email": True}}
     )
 
-
-# ================= EMAIL COLLECT ================= #
 # ================= EMAIL COLLECT ================= #
 
-@app.on_message(filters.text & ~filters.command)
+@app.on_message(filters.text & ~filters.regex(r"^/"))
 async def email_handler(client, message):
     user_id = message.from_user.id
     user = users_col.find_one({"user_id": user_id})
@@ -325,10 +323,9 @@ async def email_handler(client, message):
 
     giveaway = premium_col.find_one({"active": True})
     if not giveaway:
-        await message.reply_text(
+        return await message.reply_text(
             "❌ ɢɪᴠᴇᴀᴡᴀʏ ᴇxᴘɪʀᴇᴅ ᴏʀ ɴᴏᴛ ᴀᴠᴀɪʟᴀʙʟᴇ."
         )
-        return
 
     active_till = get_time() + datetime.timedelta(
         days=giveaway["active_days"]
@@ -348,9 +345,7 @@ async def email_handler(client, message):
                 "awaiting_email": False,
                 "referrals": new_referrals
             },
-            "$inc": {
-                "claimed": 1
-            }
+            "$inc": {"claimed": 1}
         }
     )
 
@@ -379,8 +374,7 @@ async def email_handler(client, message):
     await message.reply_text(
         "🎉 **ᴘʀᴇᴍɪᴜᴍ ᴄʟᴀɪᴍᴇᴅ sᴜᴄᴄᴇssғᴜʟʟʏ!**\n\n"
         "📧 ʏᴏᴜʀ ᴇᴍᴀɪʟ ʜᴀs ʙᴇᴇɴ sᴇɴᴛ ғᴏʀ ᴀᴄᴛɪᴠᴀᴛɪᴏɴ.\n"
-        "⏳ ᴘʟᴇᴀsᴇ ᴡᴀɪᴛ ᴀ ʜᴏᴜʀs ғᴏʀ ʏᴏᴜʀ ᴄᴏɴғɪʀᴍᴀᴛɪᴏɴ ʙᴇᴇɴ ᴄᴏᴍᴘʟᴇᴛᴇᴅ."
-        ,
+        "⏳ ᴘʟᴇᴀsᴇ ᴡᴀɪᴛ ᴀ ғᴇᴡ ʜᴏᴜʀs.",
         reply_markup=main_menu()
     )
 # ================= PROFILE ================= #
