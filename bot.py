@@ -84,12 +84,12 @@ def force_join_keyboard():
 
     for link in FORCE_JOIN_LINKS:
         join_buttons.append(
-            InlineKeyboardButton("📢 Join", url=link)
+            InlineKeyboardButton("📢 𝐉𝐎𝐈𝐍", url=link)
         )
 
     return InlineKeyboardMarkup([
         join_buttons,  # 👈 3 join buttons ek line me
-        [InlineKeyboardButton("✅ VERIFY", callback_data="verify_join")]
+        [InlineKeyboardButton("✅ 🆅︎🅴︎🆁︎🅸︎🅵︎🆈︎", callback_data="verify_join")]
     ])
 # ================= VERIFY FORCE JOIN ================= #
 
@@ -98,13 +98,22 @@ async def verify_join(client, callback_query):
     user_id = callback_query.from_user.id
 
     if await is_joined_all(client, user_id):
-        try:
-            await callback_query.message.edit_text(
-                "✅ **Verification Successful!**\nWelcome 👇",
-                reply_markup=main_menu()
-            )
-        except:
-            pass
+    if await is_joined_all(client, user_id):
+    try:
+        await callback_query.message.edit_text(
+            "✅ **𝐘𝐎𝐔𝐑 𝐕𝐄𝐑𝐈𝐅𝐈𝐂𝐀𝐓𝐈𝐎𝐍 𝐒𝐔𝐂𝐂𝐄𝐒𝐒𝐅𝐔𝐋 😉!!**\n\n"
+            "👋 ᴡᴇʟᴄᴏᴍᴇ ᴛᴏ ᴘʀᴇᴍɪᴜᴍ ɢɪᴠᴇᴀᴡᴀʏ ʙᴏᴛ!\n\n"
+            "🎁 ᴇᴀʀɴ ᴘʀᴇᴍɪᴜᴍ ʙʏ ʀᴇғᴇʀʀɪɴɢ ᴜsᴇʀs\n"
+            "🚀 sɪᴍᴘʟᴇ & ғᴀsᴛ ᴄʟᴀɪᴍɪɴɢ sʏsᴛᴇᴍ\n\n"
+            "📢 **ʜᴏᴡ ɪᴛ ᴡᴏʀᴋs:**\n"
+            "• sʜᴀʀᴇ ʀᴇғᴇʀʀᴀʟ ʟɪɴᴋ\n"
+            "• ᴄᴏᴍᴘʟᴇᴛᴇ ʀᴇǫᴜɪʀᴇᴅ ʀᴇғᴇʀʀᴀʟs ᴛᴏ ᴄʟᴀɪᴍ ᴘʀᴇᴍɪᴜᴍ\n"
+            "• ᴄʟᴀɪᴍ ᴘʀᴇᴍɪᴜᴍ ʀᴇᴡᴀʀᴅ\n\n"
+            "👇 **Choose an option below:**",
+            reply_markup=main_menu()
+        )
+    except:
+        pass
     else:
         await callback_query.answer(
             "❌ Join all channels first!",
@@ -117,15 +126,15 @@ def main_menu():
     return InlineKeyboardMarkup(
         [
             [
-                InlineKeyboardButton("🎁 Get Free Premium", callback_data="get_premium"),
-                InlineKeyboardButton("👤 Profile", callback_data="profile")
+                InlineKeyboardButton("🎁 ɢᴇᴛ ғʀᴇᴇ ᴘʀᴇᴍɪᴜᴍ", callback_data="get_premium"),
+                InlineKeyboardButton("😎 ᴘʀᴏғɪʟᴇ", callback_data="profile")
             ],
             [
-                InlineKeyboardButton("🔗 Refer & Get Premium", callback_data="refer"),
-                InlineKeyboardButton("💬 Support", url=SUPPORT_GROUP)
+                InlineKeyboardButton("🔗 ʀᴇғᴇʀ & ɢᴇᴛ ᴘʀᴇᴍɪᴜᴍ", callback_data="refer"),
+                InlineKeyboardButton("💬 sᴜᴘᴘᴏʀᴛ", url=SUPPORT_GROUP)
             ],
             [
-                InlineKeyboardButton("👨‍💻 Developer", url=f"https://t.me/Ankitgupta2144")
+                InlineKeyboardButton("💌h ᴅᴇᴠᴇʟᴏᴘᴇʀ", url=f"https://t.me/Ankitgupta2144")
             ]
         ]
     )
@@ -172,7 +181,7 @@ async def start_handler(client, message):
                 try:
                     await client.send_message(
                         referrer_id,
-                        "🎉 **New Referral Joined!**\nYour referral count increased by 1."
+                        "🎉 **ɴᴇᴡ ʀᴇғᴇʀʀᴀʟ ᴊᴏɪɴᴇᴅ!!**\nʏᴏᴜʀ ʀᴇғᴇʀʀᴀʟ ᴄᴏᴜɴᴛ ɪɴᴄʀᴇᴀsᴇᴅ ʙʏ 𝟷."
                     )
                 except:
                     pass
@@ -180,29 +189,29 @@ async def start_handler(client, message):
     # 🔒 FORCE JOIN CHECK (AFTER REFERRAL)
     if not await is_joined_all(client, user_id):
         return await message.reply_text(
-            "🔒 **Please join all required channels to use this bot**",
+            "🔒 **ᴘʟᴇᴀsᴇ ᴊᴏɪɴ ᴀʟʟ ʀᴇǫᴜɪʀᴇᴅ ɢʀᴏᴜᴘs & ᴄʜᴀɴɴᴇʟ ᴛᴏ ᴜsᴇ ᴛʜɪs ʙᴏᴛ**",
             reply_markup=force_join_keyboard()
         )
 
     # 📢 LOG EVERY START
     await client.send_message(
         LOG_GROUP_ID,
-        f"🚀 **User Started Bot**\n\n"
+        f"🚀 **𝐔𝐬𝐞𝐫 𝐒𝐭𝐚𝐫𝐭𝐞𝐝 𝐁𝐨𝐭**\n\n"
         f"👤 @{username}\n"
         f"🆔 `{user_id}`\n"
-        f"👥 Referred by: `{referrer_id}`\n"
+        f"👥 ʀᴇғᴇʀʀᴇᴅ ʙʏ: `{referrer_id}`\n"
         f"⏰ `{get_time()}`"
     )
 
     # 🎉 Welcome
     await message.reply_text(
-        "👋 **Welcome to Premium Giveaway Bot!**\n\n"
-        "🎁 Earn premium by referring users\n"
-        "🚀 Simple & fast claiming system\n\n"
-        "📢 **How it works:**\n"
-        "• Share referral link\n"
-        "• Complete required referrals\n"
-        "• Claim premium reward\n\n",
+        "👋 ᴡᴇʟᴄᴏᴍᴇ ᴛᴏ ᴘʀᴇᴍɪᴜᴍ ɢɪᴠᴇᴀᴡᴀʏ ʙᴏᴛ!\n\n"
+            "🎁 ᴇᴀʀɴ ᴘʀᴇᴍɪᴜᴍ ʙʏ ʀᴇғᴇʀʀɪɴɢ ᴜsᴇʀs\n"
+            "🚀 sɪᴍᴘʟᴇ & ғᴀsᴛ ᴄʟᴀɪᴍɪɴɢ sʏsᴛᴇᴍ\n\n"
+            "📢 **ʜᴏᴡ ɪᴛ ᴡᴏʀᴋs:**\n"
+            "• sʜᴀʀᴇ ʀᴇғᴇʀʀᴀʟ ʟɪɴᴋ\n"
+            "• ᴄᴏᴍᴘʟᴇᴛᴇ ʀᴇǫᴜɪʀᴇᴅ ʀᴇғᴇʀʀᴀʟs ᴛᴏ ᴄʟᴀɪᴍ ᴘʀᴇᴍɪᴜᴍ\n"
+            "• ᴄʟᴀɪᴍ ᴘʀᴇᴍɪᴜᴍ ʀᴇᴡᴀʀᴅ\n\n"
         reply_markup=main_menu(),
         disable_web_page_preview=True
     )
@@ -213,13 +222,13 @@ async def start_handler(client, message):
 async def back_menu(client, callback_query):
     try:
         await callback_query.message.edit_text(
-            "👋 **Welcome to Premium Giveaway Bot!**\n\n"
-            "🎁 Earn premium by referring users\n"
-            "🚀 Simple & fast claiming system\n\n"
-            "📢 **How it works:**\n"
-            "• Share referral link\n"
-            "• Complete required referrals\n"
-            "• Claim premium reward\n\n",
+            "👋 ᴡᴇʟᴄᴏᴍᴇ ᴛᴏ ᴘʀᴇᴍɪᴜᴍ ɢɪᴠᴇᴀᴡᴀʏ ʙᴏᴛ!\n\n"
+            "🎁 ᴇᴀʀɴ ᴘʀᴇᴍɪᴜᴍ ʙʏ ʀᴇғᴇʀʀɪɴɢ ᴜsᴇʀs\n"
+            "🚀 sɪᴍᴘʟᴇ & ғᴀsᴛ ᴄʟᴀɪᴍɪɴɢ sʏsᴛᴇᴍ\n\n"
+            "📢 **ʜᴏᴡ ɪᴛ ᴡᴏʀᴋs:**\n"
+            "• sʜᴀʀᴇ ʀᴇғᴇʀʀᴀʟ ʟɪɴᴋ\n"
+            "• ᴄᴏᴍᴘʟᴇᴛᴇ ʀᴇǫᴜɪʀᴇᴅ ʀᴇғᴇʀʀᴀʟs ᴛᴏ ᴄʟᴀɪᴍ ᴘʀᴇᴍɪᴜᴍ\n"
+            "• ᴄʟᴀɪᴍ ᴘʀᴇᴍɪᴜᴍ ʀᴇᴡᴀʀᴅ\n\n"
             reply_markup=main_menu()
         )
     except:
@@ -236,16 +245,16 @@ async def refer_handler(client, callback_query):
     link = f"https://t.me/{BOT_USERNAME}?start={user_id}"
 
     text = (
-        "🔗 **Your Referral Link**\n\n"
+        "🔗 **ʏᴏᴜʀ ʀᴇғᴇʀʀᴀʟ ʟɪɴᴋ**\n\n"
         f"`{link}`\n\n"
-        "📢 Share this link and earn referrals.\n"
-        "🎁 Complete referrals to claim premium!"
+        "📢 sʜᴀʀᴇ ᴛʜɪs ʟɪɴᴋ ᴀɴᴅ ᴇᴀʀɴ ʀᴇғᴇʀʀᴀʟs.\n"
+        "🎁 /ᴄᴏᴍᴘʟᴇᴛᴇ ʀᴇғᴇʀʀᴀʟs ᴛᴏ ᴄʟᴀɪᴍ ᴘʀᴇᴍɪᴜᴍ!"
     )
 
     await callback_query.message.edit_text(
         text,
         reply_markup=InlineKeyboardMarkup(
-            [[InlineKeyboardButton("⬅️ Back", callback_data="back_menu")]]
+            [[InlineKeyboardButton("⬅️ ʙᴀᴄᴋ", callback_data="back_menu")]]
         )
 )
 # ================= GET FREE PREMIUM ================= #
@@ -262,7 +271,7 @@ async def get_premium(client, callback_query):
     if user.get("premium_active_till"):
         if user["premium_active_till"] > get_time():
             return await callback_query.answer(
-                "❌ You already have an active premium!",
+                "🤡ᴜʜʜ...ɴᴜғ..\n\n ʏᴏᴜ ᴀʟʀᴇᴀᴅʏ ʜᴀᴠᴇ ᴀɴ ᴀᴄᴛɪᴠᴇ ᴘʀᴇᴍɪᴜᴍ ᴏɴ ʏᴏᴜʀ ᴀᴄᴄᴏᴜɴᴛ ʙᴀʙʏ 🥵!!",
                 show_alert=True
             )
 
@@ -277,17 +286,17 @@ async def get_premium(client, callback_query):
 
     if user["referrals"] < required_refs:
         return await callback_query.answer(
-            f"❌ You need {required_refs} referrals to claim!",
+            f"ʏᴏᴜ ɴᴇᴇᴅ {required_refs} ʀᴇғᴇʀʀᴀʟs ᴛᴏ ᴄʟᴀɪᴍ ʏᴏᴜᴛᴜʙᴇ ᴘʀᴇᴍɪᴜᴍ ʙᴀʙʏ🥵🥵!",
             show_alert=True
         )
 
     await callback_query.message.edit_text(
-        f"✅ **You are eligible!**\n\n"
-        f"🎁 Reward: `{giveaway['reward']}`\n"
-        f"📉 Referrals to deduct: `{required_refs}`\n\n"
-        f"📧 **Now send your email address** to activate premium.",
+        f"✅ **ʏᴏᴜ ᴀʀᴇ ᴇʟɪɢɪʙʟᴇ ᴛᴏ ᴄʟᴀɪᴍ ᴘʀᴇᴍɪᴜᴍ!**\n\n"
+        f"🎁 ʀᴇᴡᴀʀᴅ: `{giveaway['reward']}`\n"
+        f"📉 ʀᴇғᴇʀʀᴀʟs ᴛᴏ ᴅᴇᴅᴜᴄᴛ: `{required_refs}`\n\n"
+        f"📧 **ɴᴏᴡ sᴇɴᴅ ʏᴏᴜʀ ᴇᴍᴀɪʟ ᴀᴅᴅʀᴇss ɪɴ ᴄʜᴀᴛ** ᴛᴏ ᴀᴄᴛɪᴠᴀᴛᴇ ᴘʀᴇᴍɪᴜᴍ ᴏɴ ʏᴏᴜʀ ᴍᴀɪʟ.\n\n ᴡᴀɪᴛ ғᴏʀ 𝟹 ʜʀs",
         reply_markup=InlineKeyboardMarkup(
-            [[InlineKeyboardButton("⬅️ Back", callback_data="back_menu")]]
+            [[InlineKeyboardButton("⬅️ ʙᴀᴄᴋ", callback_data="back_menu")]]
         )
     )
 
@@ -311,7 +320,7 @@ async def email_handler(client, message):
     giveaway = premium_col.find_one({"active": True})
 
     if not giveaway:
-        return await message.reply_text("❌ Giveaway expired.")
+        return await message.reply_text("ɢɪᴠᴇᴀᴡᴀʏ ᴇxᴘɪʀᴇᴅ ᴏʀ ɴᴏᴛ ᴀᴠᴀɪʟᴀʙʟᴇ ʀɪɢʜᴛ ɴᴏᴡ.")
 
     active_till = get_time() + datetime.timedelta(
         days=giveaway["active_days"]
@@ -343,18 +352,18 @@ async def email_handler(client, message):
     # Log group
     await client.send_message(
         LOG_GROUP_ID,
-        f"🎉 **Premium Claimed**\n\n"
-        f"👤 User: @{message.from_user.username}\n"
-        f"🆔 ID: `{user_id}`\n"
-        f"📧 Email: `{email}`\n"
-        f"🎁 Reward: `{giveaway['reward']}`\n"
-        f"⏰ Time: `{get_time()}`"
+        f"🎉 **Pʀᴇᴍɪᴜᴍ Cʟᴀɪᴍᴇᴅ**\n\n"
+        f"👤 ᴜsᴇʀ: @{message.from_user.username}\n"
+        f"🆔 ɪᴅ: `{user_id}`\n"
+        f"📧 ᴇᴍᴀɪʟ: `{email}`\n"
+        f"🎁 ʀᴇᴡᴀʀᴅ: `{giveaway['reward']}`\n"
+        f"⏰ ᴛɪᴍᴇ: `{get_time()}`"
     )
 
     await message.reply_text(
-        "🎉 **Premium Claimed Successfully!**\n\n"
-        "📧 Your email has been sent for activation.\n"
-        "⏳ Please wait for confirmation.",
+        "🎉 **ᴘʀᴇᴍɪᴜᴍ ᴄʟᴀɪᴍᴇᴅ sᴜᴄᴄᴇssғᴜʟʟʏ ᴏɴ ᴍᴀɪʟ!**\n\n"
+        "📧 ʏᴏᴜʀ ᴇᴍᴀɪʟ ʜᴀs ʙᴇᴇɴ sᴇɴᴛ ғᴏʀ ᴀᴄᴛɪᴠᴀᴛɪᴏɴ.\n"
+        "⏳ ᴘʟᴇᴀsᴇ ᴡᴀɪᴛ ᴀ ʜᴏᴜʀs ғᴏʀ ʏᴏᴜʀ ᴄᴏɴғɪʀᴍᴀᴛɪᴏɴ ʙᴇᴇɴ ᴄᴏᴍᴘʟᴇᴛᴇᴅ.",
         reply_markup=main_menu()
     )
 # ================= PROFILE ================= #
@@ -365,35 +374,35 @@ async def profile_handler(client, callback_query):
     user = users_col.find_one({"user_id": user_id})
 
     if not user:
-        return await callback_query.answer("User not found!", show_alert=True)
+        return await callback_query.answer("ᴜsᴇʀ ɴᴏᴛ ғᴏᴜɴᴅ!", show_alert=True)
 
     referrals = user.get("referrals", 0)
     claimed = user.get("claimed", 0)
 
     premium_till = user.get("premium_active_till")
     if premium_till and premium_till > get_time():
-        status = "✅ Active"
+        status = "✅ ᴀᴄᴛɪᴠᴇ"
         till = premium_till.strftime("%d-%m-%Y %H:%M")
-        can_claim = "❌ No (Premium Active)"
+        can_claim = " Nᴏ (Pʀᴇᴍɪᴜᴍ Aᴄᴛɪᴠᴇ)"
     else:
-        status = "❌ Not Active"
+        status = "❌ ɴᴏᴛ ᴀᴄᴛɪᴠᴇ"
         till = "—"
-        can_claim = "✅ Yes"
+        can_claim = "✅ ʏᴇs"
 
     text = (
-        "👤 **Your Profile**\n\n"
-        f"🆔 **User ID:** `{user_id}`\n"
-        f"👥 **Referrals:** `{referrals}`\n"
-        f"🎁 **Total Claims:** `{claimed}`\n\n"
-        f"💎 **Premium Status:** {status}\n"
-        f"⏳ **Active Till:** `{till}`\n\n"
-        f"🛡 **Can Claim New Reward:** {can_claim}"
+        "👤 **ʏᴏᴜʀ ᴘʀᴏғɪʟᴇ**\n\n"
+        f"🆔 **ᴜsᴇʀ ɪᴅ:** `{user_id}`\n"
+        f"👥 **ʀᴇғғᴇʀᴀʟs:** `{referrals}`\n"
+        f"🎁 **ᴛᴏᴛᴀʟ ᴄʟᴀɪᴍs:** `{claimed}`\n\n"
+        f"💎 **ᴘʀᴇᴍɪᴜᴍ sᴛᴀᴛᴜs:** {status}\n"
+        f"⏳ **ᴀᴄᴛɪᴠᴇ ᴛɪʟʟ:** `{till}`\n\n"
+        f"🛡 **ᴄᴀɴ ᴄʟᴀɪᴍ ɴᴇᴡ ᴘʀᴇᴍɪᴜᴍ ʀᴇᴡᴀʀᴅ:** {can_claim}"
     )
 
     await callback_query.message.edit_text(
         text,
         reply_markup=InlineKeyboardMarkup(
-            [[InlineKeyboardButton("⬅️ Back", callback_data="back_menu")]]
+            [[InlineKeyboardButton("⬅️ ʙᴀᴄᴋ", callback_data="back_menu")]]
         )
         )
 # ================= TIME PARSER ================= #
@@ -454,7 +463,7 @@ async def add_premium(client, message):
 
     except Exception as e:
         await message.reply_text(
-            "❌ **Wrong Format!**\n\n"
+            "❌ **ᴡʀᴏɴɢ ғᴏʀᴍᴀᴛ!**\n\n"
             "`/addpremium amount referrals time per_user months`\n"
             "Example:\n"
             "`/addpremium 50 5 24h 1 1`"
@@ -532,7 +541,7 @@ async def gen_code(client, message):
 
     except:
         await message.reply_text(
-            "❌ **Wrong Format**\n\n"
+            "❌ **ᴡʀᴏɴɢ ғᴏʀᴍᴀᴛ**\n\n"
             "`/gencode per_user user_limit time`\n"
             "Example:\n"
             "`/gencode 1 10 2d`"
@@ -551,7 +560,7 @@ async def remove_code(client, message):
         if result.deleted_count:
             await message.reply_text("🗑 **Code removed successfully!**")
         else:
-            await message.reply_text("❌ Code not found!")
+            await message.reply_text("😔 ᴄᴏᴅᴇ ɴᴏᴛ ғᴏᴜɴᴅ!")
 
     except:
         await message.reply_text("❌ Use: `/rmcode CODE`")
@@ -568,11 +577,11 @@ async def redeem_code_handler(client, message):
 
     # Expiry check
     if code_data["expire_at"] < get_time():
-        return await message.reply_text("❌ This code has expired!")
+        return await message.reply_text("🤐 ᴛʜɪs ᴄᴏᴅᴇ ʜᴀs ᴇxᴘɪʀᴇᴅ!")
 
     # User limit check
     if len(code_data["used_by"]) >= code_data["user_limit"]:
-        return await message.reply_text("❌ Code usage limit reached!")
+        return await message.reply_text("😬😮‍💨 ɴᴏ ʙᴀʙʏ ᴜʀ ʟᴀᴛᴇ ᴄᴏᴅᴇ ᴜsᴀɢᴇ ʟɪᴍɪᴛ ʀᴇᴀᴄʜᴇᴅ!!")
 
     # Per user check
     if code_data["used_by"].count(user_id) >= code_data["per_user"]:
@@ -606,8 +615,8 @@ async def redeem_code_handler(client, message):
     )
 
     await message.reply_text(
-        "✅ **Premium Activated via Redeem Code!**\n"
-        f"⏳ Active till: `{active_till}`",
+        "✅ **ᴘʀᴇᴍɪᴜᴍ ᴀᴄᴛɪᴠᴀᴛᴇᴅ ᴠɪᴀ ʀᴇᴅᴇᴇᴍ ᴄᴏᴅᴇe!**\n"
+        f"⏳ ᴀᴄᴛɪᴠᴇ ᴛɪʟʟ: `{active_till}`",
         reply_markup=main_menu()
         )
 
@@ -619,7 +628,7 @@ async def redeem_command(client, message):
 
     if len(message.command) != 2:
         return await message.reply_text(
-            "❌ **Wrong Format**\n\nUse:\n`/redeem CODE`"
+            "❌ **ᴡʀᴏɴɢ ғᴏʀᴍᴀᴛ**\n\nUse:\n`/redeem CODE`"
         )
 
     code = message.command[1].upper()
