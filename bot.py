@@ -217,40 +217,20 @@ async def start_handler(client, message):
 
 @app.on_callback_query(filters.regex("back_menu"))
 async def back_menu(client, callback_query):
-    await callback_query.message.edit_text(
-        "👋 **Welcome to Premium Giveaway Bot!**\n\n"
-        "🎁 Earn premium by referring users\n"
-        "🚀 Simple & fast claiming system\n\n"
-        "📢 **How it works:**\n"
-        "• Share referral link\n"
-        "• Complete required referrals\n"
-        "• Claim premium reward\n\n",
-        reply_markup=main_menu()
-)
+    try:
+        await callback_query.message.edit_text(
+            "👋 **Welcome to Premium Giveaway Bot!**\n\n"
+            "🎁 Earn premium by referring users\n"
+            "🚀 Simple & fast claiming system\n\n"
+            "📢 **How it works:**\n"
+            "• Share referral link\n"
+            "• Complete required referrals\n"
+            "• Claim premium reward\n\n",
+            reply_markup=main_menu()
+        )
+    except:
+        pass
 # ================= REFERRAL Delt SYSTEM ================= #
-# ================= REFERRAL LOG SYSTEM ================= #
-
-    await client.send_message(
-        LOG_GROUP_ID,
-        f"🆕 **New User Started Bot**\n\n"
-        f"👤 User: @{username}\n"
-        f"🆔 ID: `{user_id}`\n"
-        f"👥 Referred By: `{referrer_id}`\n"
-        f"⏰ Time: `{get_time()}`"
-    )
-
-    text = (
-        "👋 **Welcome to Premium Giveaway Bot!**\n\n"
-        "🎁 Earn premium by referring users\n"
-        "🚀 Simple & fast claiming system\n\n"
-        f"🔥 [DEVLOPER]({START_TELEGRAPH})"
-    )
-
-    await message.reply_text(
-        text,
-        reply_markup=main_menu(),
-        disable_web_page_preview=True
-    )
 
 # ================= REFER BUTTON ================= #
 
